@@ -77,7 +77,7 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 }
 
 
-inline void qhash(void *state, const void *input)
+void qhash(void *state, const void *input)
 {
     init_Qhash_contexts();
     
