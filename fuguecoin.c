@@ -47,7 +47,7 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 }
 
 
-inline void fuguehash(void *state, const void *input)
+void fuguehash(void *state, const void *input)
 {
     sph_fugue256_context ctx_fugue;
     sph_fugue256_init(&ctx_fugue);
