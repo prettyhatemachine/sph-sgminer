@@ -240,7 +240,9 @@ char *set_kernel(char *arg)
 	if (kern == KL_NONE)
 		return "Invalid parameter to set_kernel";
 	gpus[device++].kernel = kern;
-	if (kern >= KL_DARKCOIN)
+	if (kern >= KL_FUGUECOIN)
+		dm_mode = DM_FUGUECOIN;
+	else if(kern >= KL_DARKCOIN)
 		dm_mode = DM_BITCOIN;
 	else if(kern >= KL_QUARKCOIN)
 		dm_mode = DM_QUARKCOIN;

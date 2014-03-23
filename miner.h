@@ -1510,6 +1510,7 @@ enum diff_calc_mode {
 	DM_BITCOIN,
 	DM_QUARKCOIN,
 	DM_LITECOIN,
+	DM_FUGUECOIN,
 };
 
 #endif /* __MINER_H__ */
