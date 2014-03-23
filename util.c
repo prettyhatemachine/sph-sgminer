@@ -45,7 +45,7 @@
 #include "util.h"
 
 #define DEFAULT_SOCKWAIT 60
-#define DM_SELECT(x, y, z) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN ? y : z))
+#define DM_SELECT(x, y, z) (dm_mode == DM_BITCOIN | dm_mode == DM_FUGUECOIN ? x : (dm_mode == DM_QUARKCOIN ? y : z))
 extern enum diff_calc_mode dm_mode;
 
 bool successful_connect = false;

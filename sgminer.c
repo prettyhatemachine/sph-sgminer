@@ -329,7 +329,7 @@ struct schedtime schedstart;
 struct schedtime schedstop;
 bool sched_paused;
 
-#define DM_SELECT(x, y, z) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN ? y : z))
+#define DM_SELECT(x, y, z) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN | dm_mode == DM_FUGUECOIN ? y : z))
 
 enum diff_calc_mode dm_mode = DM_LITECOIN;
 
@@ -6105,7 +6105,8 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
+	(gpus[i].kernel == KL_FUGUECOIN ? sha256(pool->coinbase, pool->swork.cb_len, merkle_root) : gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len));
+	
 	memcpy(merkle_sha, merkle_root, 32);
 	for (i = 0; i < pool->swork.merkles; i++) {
 		memcpy(merkle_sha + 32, pool->swork.merkle_bin[i], 32);
