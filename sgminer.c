@@ -329,7 +329,7 @@ struct schedtime schedstart;
 struct schedtime schedstop;
 bool sched_paused;
 
-#define DM_SELECT(x, y, z) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN | dm_mode == DM_FUGUECOIN ? y : z))
+#define DM_SELECT(x, y, z, w) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN ? y : (dm_mode == DM_FUGUECOIN ? w : z) ))
 
 enum diff_calc_mode dm_mode = DM_LITECOIN;
 
@@ -3020,7 +3020,7 @@ static void calc_diff(struct work *work, double known)
 	else {
 		double d64, dcut64;
 
-		d64 = (double) DM_SELECT(1, 256, 65536) * truediffone;
+		d64 = (double) DM_SELECT(1, 256, 65536, 256) * truediffone;
 
 		dcut64 = le256todouble(work->target);
 		if (unlikely(!dcut64))
@@ -3785,7 +3785,7 @@ static double share_diff(const struct work *work)
 	double d64, s64;
 	double ret;
 
-	d64 = (double) DM_SELECT(1, 256, 65536) * truediffone;
+	d64 = (double) DM_SELECT(1, 256, 65536, 256) * truediffone;
 	s64 = le256todouble(work->hash);
 	if (unlikely(!s64))
 		s64 = 0;
@@ -4108,7 +4108,7 @@ static void set_blockdiff(const struct work *work)
 	uint8_t pow = work->data[72];
 	int powdiff = (8 * (0x1d - 3)) - (8 * (pow - 3));
 	uint32_t diff32 = be32toh(*((uint32_t *)(work->data + 72))) & 0x00FFFFFF;
-	double numerator = DM_SELECT(0xFFFFULL, 0xFFFFFFULL, 0xFFFFFFFFULL) << powdiff;
+	double numerator = DM_SELECT(0xFFFFULL, 0xFFFFFFULL, 0xFFFFFFFFULL, 0xFFFFULL) << powdiff;
 	double ddiff = numerator / (double)diff32;
 
 	if (unlikely(current_diff != ddiff)) {
@@ -6027,7 +6027,6 @@ out_unlock:
 static void gen_hash(unsigned char *data, unsigned char *hash, int len)
 {
 	unsigned char hash1[32];
-
 	sha256(data, len, hash1);
 	sha256(hash1, 32, hash);
 }
@@ -6045,7 +6044,7 @@ void set_target(unsigned char *dest_target, double diff)
 	}
 
 	// FIXME: is target set right?
-	d64 = (double) DM_SELECT(1, 256, 65536) * truediffone;
+	d64 = (double) DM_SELECT(1, 256, 65536, 256) * truediffone;
 	d64 /= diff;
 
 	dcut64 = d64 / bits192;
@@ -6078,7 +6077,6 @@ void set_target(unsigned char *dest_target, double diff)
 
 	if (opt_debug) {
 		char *htarget = bin2hex(target, 32);
-
 		applog(LOG_DEBUG, "Generated target %s", htarget);
 		free(htarget);
 	}
@@ -6108,8 +6106,11 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	(gpus[i].kernel == KL_FUGUECOIN ? sha256(pool->coinbase, pool->swork.cb_len, merkle_root) : gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len));
-	
+	if (gpus[i].kernel == KL_FUGUECOIN || gpus[i].kernel == KL_GROESTLCOIN) {
+		sha256(pool->coinbase, pool->swork.cb_len, merkle_root);
+	}
+	else
+		gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
 	memcpy(merkle_sha, merkle_root, 32);
 	for (i = 0; i < pool->swork.merkles; i++) {
 		memcpy(merkle_sha + 32, pool->swork.merkle_bin[i], 32);
@@ -6310,7 +6311,7 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 	uint64_t *hash64 = (uint64_t *)(work->hash + 24), diff64;
 
 	rebuild_nonce(work, nonce);
-	diff64 = DM_SELECT(0x00000000ffff0000ULL, 0x000000ffff000000ULL, 0x0000ffff00000000ULL);
+	diff64 = DM_SELECT(0x00000000ffff0000ULL, 0x000000ffff000000ULL, 0x0000ffff00000000ULL, 0x00000000ffff0000ULL);
 	diff64 /= diff;
 
 	return (le64toh(*hash64) <= diff64);
@@ -6319,11 +6320,11 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 static void update_work_stats(struct thr_info *thr, struct work *work)
 {
 	double test_diff = current_diff;
-	test_diff *= DM_SELECT(1, 256, 65536);
+	test_diff *= DM_SELECT(1, 256, 65536, 256);
 
 	work->share_diff = share_diff(work);
 
-	test_diff *= DM_SELECT(1, 256, 65536);
+	test_diff *= DM_SELECT(1, 256, 65536, 256);
 
 	if (unlikely(work->share_diff >= test_diff)) {
 		work->block = true;
