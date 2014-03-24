@@ -4248,6 +4248,9 @@ void write_config(FILE *fcfg)
 				case KL_ANIMECOIN:
 					fprintf(fcfg, ANIMECOIN_KERNNAME);
 					break;
+				case KL_GROESTLCOIN:
+					fprintf(fcfg, GROESTLCOIN_KERNNAME);
+					break;
 			}
 		}
 
@@ -5897,7 +5900,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	if (gpus[i].kernel == KL_FUGUECOIN) {
+	if (gpus[i].kernel == KL_FUGUECOIN || gpus[i].kernel == KL_GROESTLCOIN) {
 		sha256(pool->coinbase, pool->swork.cb_len, merkle_root);
 	}
 	else
@@ -6074,6 +6077,9 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 			break;
 		case KL_ANIMECOIN:
 			animecoin_regenhash(work);
+			break;
+		case KL_GROESTLCOIN:
+			groestlcoin_regenhash(work);
 			break;
 		default:
 			scrypt_regenhash(work);

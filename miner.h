@@ -388,6 +388,7 @@ enum cl_kernels {
 	KL_DARKCOIN,	// kernels starting from this will have difficulty calculated by using bitcoin algorithm
 	KL_MYRIADCOIN_GROESTL,
 	KL_FUGUECOIN,	// kernels starting from this will have difficulty calculated by using fuguecoin algorithm
+	KL_GROESTLCOIN,
 };
 
 enum dev_reason {
