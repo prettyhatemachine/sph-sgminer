@@ -222,8 +222,18 @@ char *set_kernel(char *arg)
 		dm_mode = DM_FUGUECOIN;
 	else if (strcmp(kern, DARKCOIN_KERNNAME) == 0)
 		dm_mode = DM_DARKCOIN;
-	else if((strcmp(kern, QUARKCOIN_KERNNAME) && strcmp(kern, ANIMECOIN_KERNNAME)) == 0)
+	else if (strcmp(kern, QUARKCOIN_KERNNAME) == 0)
 		dm_mode = DM_QUARKCOIN;
+	else if (strcmp(kern, ANIMECOIN_KERNNAME) == 0)
+		dm_mode = DM_QUARKCOIN;
+	else if (strcmp(kern, MYRIADCOIN_GROESTL_KERNNAME) == 0)
+		dm_mode = DM_FUGUECOIN;
+	else if (strcmp(kern, QUBITCOIN_KERNNAME) == 0)
+		dm_mode = DM_QUARKCOIN;
+	else if (strcmp(kern, INKCOIN_KERNNAME) == 0)
+		dm_mode = DM_DARKCOIN;
+	else if (strcmp(kern, GROESTLCOIN_KERNNAME) == 0)
+		dm_mode = DM_DARKCOIN;
 	else
 		dm_mode = DM_LITECOIN;
 
