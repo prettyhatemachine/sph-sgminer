@@ -3032,7 +3032,7 @@ static void calc_diff(struct work *work, double known)
 	else {
 		double d64, dcut64;
 
-		d64 = (double) DM_SELECT(256, 1, 256, 65536) * truediffone;
+		d64 = (double) DM_SELECT(1, 1, 256, 65536) * truediffone;
 
 		dcut64 = le256todouble(work->target);
 		if (unlikely(!dcut64))
@@ -3653,7 +3653,7 @@ static uint64_t share_diff(const struct work *work)
 	double d64, s64;
 	uint64_t ret;
 
-	d64 = (double) DM_SELECT(256, 1, 256, 65536) * truediffone;
+	d64 = (double) DM_SELECT(1, 1, 256, 65536) * truediffone;
 	s64 = le256todouble(work->hash);
 	if (unlikely(!s64))
 		s64 = 0;
@@ -5914,7 +5914,7 @@ void set_target(unsigned char *dest_target, double diff)
 	}
 
 	// FIXME: is target set right?
-	d64 = (double) DM_SELECT(256, 1, 256, 65536) * truediffone;
+	d64 = (double) DM_SELECT(1, 1, 256, 65536) * truediffone;
 	d64 /= diff;
 
 	dcut64 = d64 / bits192;
@@ -6182,7 +6182,7 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 static void update_work_stats(struct thr_info *thr, struct work *work)
 {
 	double test_diff = current_diff;
-	test_diff *= DM_SELECT(256, 1, 256, 65536);
+	test_diff *= DM_SELECT(1, 1, 256, 65536);
 
 	work->share_diff = share_diff(work);
 
