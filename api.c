@@ -145,8 +145,6 @@ static const char *NULLSTR = "(null)";
 static const char *TRUESTR = "true";
 static const char *FALSESTR = "false";
 
-static const char *SCRYPTSTR = "scrypt";
-
 static const char *DEVICECODE = "GPU ";
 
 static const char *OSINFO =
@@ -424,7 +422,7 @@ struct CODES {
  { SEVERITY_SUCC,  MSG_ZERNOSUM, PARAM_STR,	"Zeroed %s stats without summary" },
  { SEVERITY_SUCC,  MSG_LOCKOK,	PARAM_NONE,	"Lock stats created" },
  { SEVERITY_WARN,  MSG_LOCKDIS,	PARAM_NONE,	"Lock stats not enabled" },
- { SEVERITY_FAIL, 0, 0, NULL }
+ { SEVERITY_FAIL, 0, (enum code_parameters)0, NULL }
 };
 
 static const char *localaddr = "127.0.0.1";
@@ -496,13 +494,13 @@ static struct io_data *_io_new(size_t initial, bool socket_buf)
 	struct io_data *io_data;
 	struct io_list *io_list;
 
-	io_data = malloc(sizeof(*io_data));
-	io_data->ptr = malloc(initial);
+	io_data = (struct io_data *)malloc(sizeof(*io_data));
+	io_data->ptr = (char *)malloc(initial);
 	io_data->siz = initial;
 	io_data->sock = socket_buf;
 	io_reinit(io_data);
 
-	io_list = malloc(sizeof(*io_list));
+	io_list = (struct io_list *)malloc(sizeof(*io_list));
 
 	io_list->io_data = io_data;
 
@@ -530,14 +528,14 @@ static bool io_add(struct io_data *io_data, char *buf)
 	tot = len + 1 + dif + sizeof(JSON_CLOSE) + sizeof(JSON_END);
 
 	if (tot > io_data->siz) {
-		size_t new = io_data->siz + (2 * SOCKBUFALLOCSIZ);
+		size_t newsize = io_data->siz + (2 * SOCKBUFALLOCSIZ);
 
-		if (new < tot)
-			new = (2 + (size_t)((float)tot / (float)SOCKBUFALLOCSIZ)) * SOCKBUFALLOCSIZ;
+		if (newsize < tot)
+			newsize = (2 + (size_t)((float)tot / (float)SOCKBUFALLOCSIZ)) * SOCKBUFALLOCSIZ;
 
-		io_data->ptr = realloc(io_data->ptr, new);
+		io_data->ptr = (char *)realloc(io_data->ptr, newsize);
 		io_data->cur = io_data->ptr + dif;
-		io_data->siz = new;
+		io_data->siz = newsize;
 	}
 
 	memcpy(io_data->cur, buf, len + 1);
@@ -606,7 +604,7 @@ static char *escape_string(char *str, bool isjson)
 	if (count == 0)
 		return str;
 
-	buf = malloc(strlen(str) + count + 1);
+	buf = (char *)malloc(strlen(str) + count + 1);
 	if (unlikely(!buf))
 		quit(1, "Failed to malloc escape buf");
 
@@ -1005,9 +1003,9 @@ static struct api_data *print_data(struct api_data *root, char *buf, bool isjson
 				sprintf(buf, "%s", *((bool *)(root->data)) ? TRUESTR : FALSESTR);
 				break;
 			case API_TIMEVAL:
-				snprintf(buf, sizeof(buf), "%ld.%06ld",
-					(long)((struct timeval *)(root->data))->tv_sec,
-					(long)((struct timeval *)(root->data))->tv_usec);
+				sprintf(buf, "%"PRIu64".%06lu",
+					(uint64_t)((struct timeval *)(root->data))->tv_sec,
+					(unsigned long)((struct timeval *)(root->data))->tv_usec);
 				break;
 			case API_TEMP:
 				sprintf(buf, "%.2f", *((float *)(root->data)));
@@ -1695,7 +1693,7 @@ static void gpustatus(struct io_data *io_data, int gpu, bool isjson, bool precom
 		root = api_add_int(root, "Last Share Pool", &last_share_pool, false);
 		root = api_add_time(root, "Last Share Time", &(cgpu->last_share_pool_time), false);
 		root = api_add_mhtotal(root, "Total MH", &(cgpu->total_mhashes), false);
-		root = api_add_double(root, "Diff1 Work", &(cgpu->diff1), false);
+		root = api_add_int(root, "Diff1 Work", &(cgpu->diff1), false);
 		root = api_add_diff(root, "Difficulty Accepted", &(cgpu->diff_accepted), false);
 		root = api_add_diff(root, "Difficulty Rejected", &(cgpu->diff_rejected), false);
 		root = api_add_diff(root, "Last Share Difficulty", &(cgpu->last_share_diff), false);
@@ -1820,6 +1818,7 @@ static void poolstatus(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __m
 			lp = (char *)NO;
 
 		root = api_add_int(root, "POOL", &i, false);
+		root = api_add_string(root, "Name", pool->name, false);
 		root = api_add_escape(root, "URL", pool->rpc_url, false);
 		root = api_add_string(root, "Status", status, false);
 		root = api_add_int(root, "Priority", &(pool->prio), false);
@@ -1835,7 +1834,7 @@ static void poolstatus(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __m
 		root = api_add_uint(root, "Remote Failures", &(pool->remotefail_occasions), false);
 		root = api_add_escape(root, "User", pool->rpc_user, false);
 		root = api_add_time(root, "Last Share Time", &(pool->last_share_time), false);
-		root = api_add_double(root, "Diff1 Shares", &(pool->diff1), false);
+		root = api_add_int(root, "Diff1 Shares", &(pool->diff1), false);
 		if (pool->rpc_proxy) {
 			root = api_add_const(root, "Proxy Type", proxytype(pool->rpc_proxytype), false);
 			root = api_add_escape(root, "Proxy", pool->rpc_proxy, false);
@@ -1854,7 +1853,7 @@ static void poolstatus(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __m
 		else
 			root = api_add_const(root, "Stratum URL", BLANK, false);
 		root = api_add_bool(root, "Has GBT", &(pool->has_gbt), false);
-		root = api_add_double(root, "Best Share", &(pool->best_diff), true);
+		root = api_add_uint64(root, "Best Share", &(pool->best_diff), true);
 		double rejp = (pool->diff_accepted + pool->diff_rejected + pool->diff_stale) ?
 				(double)(pool->diff_rejected) / (double)(pool->diff_accepted + pool->diff_rejected + pool->diff_stale) : 0;
 		root = api_add_percent(root, "Pool Rejected%", &rejp, false);
@@ -1915,7 +1914,7 @@ static void summary(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __mayb
 	root = api_add_diff(root, "Difficulty Accepted", &(total_diff_accepted), true);
 	root = api_add_diff(root, "Difficulty Rejected", &(total_diff_rejected), true);
 	root = api_add_diff(root, "Difficulty Stale", &(total_diff_stale), true);
-	root = api_add_double(root, "Best Share", &(best_diff), true);
+	root = api_add_uint64(root, "Best Share", &(best_diff), true);
 	double hwp = (hw_errors + total_diff1) ?
 			(double)(hw_errors) / (double)(hw_errors + total_diff1) : 0;
 	root = api_add_percent(root, "Device Hardware%", &hwp, false);
@@ -2115,7 +2114,7 @@ static bool pooldetails(char *param, char **url, char **user, char **pass)
 {
 	char *ptr, *buf;
 
-	ptr = buf = malloc(strlen(param)+1);
+	ptr = buf = (char *)malloc(strlen(param) + 1);
 	if (unlikely(!buf))
 		quit(1, "Failed to malloc pooldetails buf");
 
@@ -2231,8 +2230,9 @@ static void poolpriority(struct io_data *io_data, __maybe_unused SOCKETTYPE c, c
 		return;
 	}
 
-	bool pools_changed[total_pools];
-	int new_prio[total_pools];
+	bool* pools_changed = (bool*)alloca(total_pools*sizeof(bool));
+	int* new_prio = (int*)alloca(total_pools*sizeof(int));
+
 	for (i = 0; i < total_pools; ++i)
 		pools_changed[i] = false;
 
@@ -2697,9 +2697,9 @@ static void devdetails(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __m
 		root = api_add_string(root, "Name", cgpu->drv->name, false);
 		root = api_add_int(root, "ID", &(cgpu->device_id), false);
 		root = api_add_string(root, "Driver", cgpu->drv->dname, false);
-		root = api_add_const(root, "Kernel", cgpu->kname ? : BLANK, false);
-		root = api_add_const(root, "Model", cgpu->name ? : BLANK, false);
-		root = api_add_const(root, "Device Path", cgpu->device_path ? : BLANK, false);
+		root = api_add_const(root, "Kernel", cgpu->kernelname ? cgpu->kernelname : BLANK, false);
+		root = api_add_const(root, "Model", cgpu->name ? cgpu->name : BLANK, false);
+		root = api_add_const(root, "Device Path", cgpu->device_path ? cgpu->device_path : BLANK, false);
 
 		root = print_data(root, buf, isjson, isjson && (i > 0));
 		io_add(io_data, buf);
@@ -2855,7 +2855,7 @@ static void minecoin(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __may
 	message(io_data, MSG_MINECOIN, 0, NULL, isjson);
 	io_open = io_add(io_data, isjson ? COMSTR JSON_MINECOIN : _MINECOIN COMSTR);
 
-	root = api_add_const(root, "Hash Method", SCRYPTSTR, false);
+	root = api_add_string(root, "Hash Method", algorithm->name, false);
 
 	cg_rlock(&ch_lock);
 	root = api_add_timeval(root, "Current Block Time", &block_timeval, true);
@@ -3267,7 +3267,7 @@ static void setup_groups()
 	bool addstar, did;
 	int i;
 
-	buf = malloc(strlen(api_groups) + 1);
+	buf = (char *)malloc(strlen(api_groups) + 1);
 	if (unlikely(!buf))
 		quit(1, "Failed to malloc ipgroups buf");
 
@@ -3357,7 +3357,7 @@ static void setup_groups()
 			}
 		}
 
-		ptr = apigroups[GROUPOFFSET(group)].commands = malloc(strlen(commands) + 1);
+		ptr = apigroups[GROUPOFFSET(group)].commands = (char *)malloc(strlen(commands) + 1);
 		if (unlikely(!ptr))
 			quit(1, "Failed to malloc group commands buf");
 
@@ -3377,7 +3377,7 @@ static void setup_groups()
 		}
 	}
 
-	ptr = apigroups[GROUPOFFSET(NOPRIVGROUP)].commands = malloc(strlen(commands) + 1);
+	ptr = apigroups[GROUPOFFSET(NOPRIVGROUP)].commands = (char *)malloc(strlen(commands) + 1);
 	if (unlikely(!ptr))
 		quit(1, "Failed to malloc noprivgroup commands buf");
 
@@ -3403,7 +3403,7 @@ static void setup_ipaccess()
 	int ipcount, mask, octet, i;
 	char group;
 
-	buf = malloc(strlen(opt_api_allow) + 1);
+	buf = (char *)malloc(strlen(opt_api_allow) + 1);
 	if (unlikely(!buf))
 		quit(1, "Failed to malloc ipaccess buf");
 
@@ -3416,7 +3416,7 @@ static void setup_ipaccess()
 			ipcount++;
 
 	// possibly more than needed, but never less
-	ipaccess = calloc(ipcount, sizeof(struct IP4ACCESS));
+	ipaccess = (struct IP4ACCESS *)calloc(ipcount, sizeof(struct IP4ACCESS));
 	if (unlikely(!ipaccess))
 		quit(1, "Failed to calloc ipaccess");
 
@@ -3579,7 +3579,7 @@ static void mcast()
 	mcast_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
 	int optval = 1;
-	if (SOCKETFAIL(setsockopt(mcast_sock, SOL_SOCKET, SO_REUSEADDR, (void *)(&optval), sizeof(optval)))) {
+	if (SOCKETFAIL(setsockopt(mcast_sock, SOL_SOCKET, SO_REUSEADDR, (const char *)(&optval), sizeof(optval)))) {
 		applog(LOG_ERR, "API mcast setsockopt SO_REUSEADDR failed (%s)%s", SOCKERRMSG, MUNAVAILABLE);
 		goto die;
 	}
@@ -3608,13 +3608,13 @@ static void mcast()
 		goto die;
 	}
 
-	if (SOCKETFAIL(setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *)(&grp), sizeof(grp)))) {
+	if (SOCKETFAIL(setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const char *)(&grp), sizeof(grp)))) {
 		applog(LOG_ERR, "API mcast join failed (%s)%s", SOCKERRMSG, MUNAVAILABLE);
 		goto die;
 	}
 
 	expect_code_len = sizeof(expect) + strlen(opt_api_mcast_code);
-	expect_code = malloc(expect_code_len+1);
+	expect_code = (char *)malloc(expect_code_len + 1);
 	if (!expect_code)
 		quit(1, "Failed to malloc mcast expect_code");
 	snprintf(expect_code, expect_code_len+1, "%s%s-", expect, opt_api_mcast_code);
@@ -3687,7 +3687,7 @@ die:
 
 static void *mcast_thread(void *userdata)
 {
-	struct thr_info *mythr = userdata;
+	struct thr_info *mythr = (struct thr_info *)userdata;
 
 	pthread_detach(pthread_self());
 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
@@ -3705,7 +3705,7 @@ void mcast_init()
 {
 	struct thr_info *thr;
 
-	thr = calloc(1, sizeof(*thr));
+	thr = (struct thr_info *)calloc(1, sizeof(*thr));
 	if (!thr)
 		quit(1, "Failed to calloc mcast thr");
 
@@ -3742,7 +3742,7 @@ void api(int api_thr_id)
 
 	SOCKETTYPE *apisock;
 
-	apisock = malloc(sizeof(*apisock));
+	apisock = (SOCKETTYPE *)malloc(sizeof(*apisock));
 	*apisock = INVSOCK;
 
 	if (!opt_api_listen) {
@@ -3941,7 +3941,7 @@ void api(int api_thr_id)
 					if (strchr(cmd, CMDJOIN)) {
 						firstjoin = isjoin = true;
 						// cmd + leading '|' + '\0'
-						cmdsbuf = malloc(strlen(cmd) + 2);
+						cmdsbuf = (char *)malloc(strlen(cmd) + 2);
 						if (!cmdsbuf)
 							quithere(1, "OOM cmdsbuf");
 						strcpy(cmdsbuf, "|");
