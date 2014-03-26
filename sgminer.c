@@ -112,7 +112,11 @@ bool use_syslog;
 bool opt_quiet;
 bool opt_realquiet;
 bool opt_loginput;
+#ifdef HAVE_CURSES
 bool opt_compact;
+bool opt_incognito;
+#endif
+
 const int opt_cutofftemp = 95;
 int opt_log_interval = 5;
 int opt_queue = 1;
@@ -1227,6 +1231,11 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--lookup-gap",
 		     set_lookup_gap, NULL, NULL,
 		     "Set GPU lookup gap for scrypt mining, comma separated"),
+#ifdef HAVE_CURSES
+	OPT_WITHOUT_ARG("--incognito",
+			opt_set_bool, &opt_incognito,
+			"Do not display pool/user names in status window"),
+#endif
 	OPT_WITH_ARG("--intensity|-I",
 		     set_intensity, NULL, NULL,
 		     "Intensity of GPU scanning (d or " MIN_INTENSITY_STR
@@ -2055,6 +2064,7 @@ static int devcursor, logstart, logcursor;
 /* statusy is where the status window goes up to in cases where it won't fit at startup */
 static int statusy;
 #endif
+
 struct cgpu_info gpus[MAX_GPUDEVICES]; /* Maximum number apparently possible */
 
 #ifdef HAVE_CURSES
@@ -2216,31 +2226,41 @@ static bool shared_strategy(void)
 static void curses_print_status(void)
 {
 	struct pool *pool = current_pool();
-
+	unsigned short int line = 0;
+	
 	wattron(statuswin, A_BOLD);
-	cg_mvwprintw(statuswin, 0, 0, PACKAGE " " VERSION " - Started: %s", datestamp);
+	cg_mvwprintw(statuswin, line, 0, PACKAGE " " VERSION " - Started: %s", datestamp);
 	wattroff(statuswin, A_BOLD);
-	mvwhline(statuswin, 1, 0, '-', 80);
-	cg_mvwprintw(statuswin, 2, 0, "%s", statusline);
+
+	mvwhline(statuswin, ++line, 0, '-', 80);
+
+	cg_mvwprintw(statuswin, ++line, 0, "%s", statusline);
 	wclrtoeol(statuswin);
-	cg_mvwprintw(statuswin, 3, 0, "ST: %d  SS: %d  NB: %d  LW: %d  GF: %d  RF: %d",
+
+	cg_mvwprintw(statuswin, ++line, 0, "ST: %d  SS: %d  NB: %d  LW: %d  GF: %d  RF: %d",
 		total_staged(), total_stale, new_blocks,
 		local_work, total_go, total_ro);
 	wclrtoeol(statuswin);
-	if (shared_strategy() && total_pools > 1) {
-		cg_mvwprintw(statuswin, 4, 0, "Connected to multiple pools %s block change notify",
-			have_longpoll ? "with": "without");
-	} else {
-		cg_mvwprintw(statuswin, 4, 0, "Connected to %s (%s) diff %s as user %s",
-			     pool->poolname,
-			     pool->has_stratum ? "stratum" : (pool->has_gbt ? "GBT" : "longpoll"),
-			     pool->diff, pool->rpc_user);
+	if (!opt_incognito) {
+		if (shared_strategy() && total_pools > 1) {
+			cg_mvwprintw(statuswin, ++line, 0, "Connected to multiple pools %s block change notify",
+				     have_longpoll ? "with": "without");
+		} else {
+			cg_mvwprintw(statuswin, ++line, 0, "Connected to %s (%s) diff %s as user %s",
+				     pool->poolname,
+				     pool->has_stratum ? "stratum" : (pool->has_gbt ? "GBT" : "longpoll"),
+				     pool->diff, pool->rpc_user);
+		}
+
+		wclrtoeol(statuswin);
 	}
-	wclrtoeol(statuswin);
-	cg_mvwprintw(statuswin, 5, 0, "Block: %s...  Diff:%s  Started: %s  Best share: %s   ",
+
+	cg_mvwprintw(statuswin, ++line, 0, "Block: %s...  Diff:%s  Started: %s  Best share: %s   ",
 		     prev_block, block_diff, blocktime, best_share);
-	mvwhline(statuswin, 6, 0, '-', 80);
+			 
+	mvwhline(statuswin, ++line, 0, '-', 80);
 	mvwhline(statuswin, statusy - 1, 0, '-', 80);
+
 	cg_mvwprintw(statuswin, devcursor - 1, 0, "[P]ool management [G]PU management [S]ettings [D]isplay options [Q]uit");
 }
 
@@ -2262,9 +2282,7 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	struct timeval now;
 	double dev_runtime, wu;
 
-	if (opt_compact)
-		return;
-
+	/* Do not print if window vertical size too small. */
 	if (devcursor + count > LINES - 2)
 		return;
 
@@ -2284,8 +2302,8 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	cgpu->utility = cgpu->accepted / dev_runtime * 60;
 	wu = cgpu->diff1 / dev_runtime * 60;
 
-	wmove(statuswin,devcursor + count, 0);
-	cg_wprintw(statuswin, " %s %*d: ", cgpu->drv->name, dev_width, cgpu->device_id);
+	wmove(statuswin, devcursor + count, 0);
+	cg_wprintw(statuswin, "%s %*d: ", cgpu->drv->name, dev_width, cgpu->device_id);
 	logline[0] = '\0';
 	cgpu->drv->get_statline_before(logline, sizeof(logline), cgpu);
 	cg_wprintw(statuswin, "%s", logline);
@@ -2387,11 +2405,10 @@ static void switch_logsize(bool __maybe_unused newdevs)
 #endif
 		if (opt_compact) {
 			logstart = devcursor + 1;
-			logcursor = logstart + 1;
 		} else {
 			logstart = devcursor + most_devices + 1;
-			logcursor = logstart + 1;
 		}
+		logcursor = logstart + 1;
 #ifdef WIN32
 		if (newdevs)
 			enable_curses_windows();
@@ -7317,11 +7334,13 @@ static void *watchdog_thread(void __maybe_unused *userdata)
 			change_logwinsize();
 			curses_print_status();
 			count = 0;
-			for (i = 0; i < total_devices; i++) {
-				cgpu = get_devices(i);
 
-				if (cgpu)
-					curses_print_devstatus(cgpu, count++);
+			if (!opt_compact) {
+				count = 0;
+				for (i = 0; i < total_devices; i++) {
+					cgpu = get_devices(i);
+					if (cgpu) curses_print_devstatus(cgpu, count++);
+				}			
 			}
 
 			touchwin(statuswin);
@@ -8098,10 +8117,6 @@ int main(int argc, char *argv[])
 	algorithm = (algorithm_t *)alloca(sizeof(algorithm_t));
 	set_algorithm(algorithm, "scrypt");
 	
-	devcursor = 8;
-	logstart = devcursor + 1;
-	logcursor = logstart + 1;
-
 	block = calloc(sizeof(struct block), 1);
 	if (unlikely(!block))
 		quit (1, "main OOM");
@@ -8153,7 +8168,15 @@ int main(int argc, char *argv[])
 
 	if (use_curses)
 		enable_curses();
+
+	/* Print device stats from this line. */
+	devcursor = opt_incognito ? 7 : 8;
+#else
+	devcursor = 8;
 #endif
+
+	logstart = devcursor + 1;
+	logcursor = logstart + 1;
 
 	applog(LOG_WARNING, "Started %s", packagename);
 	if (cnfbuf) {

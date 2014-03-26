@@ -3,8 +3,12 @@
 ## Version 4.2.0 - TBA
 
 * Forward-port changes from `ckolivas/cgminer` up to 3.12.3., and then some (up to 133252175b90159d18151b004bf767d5a43812ea).
-
-
+* Adaptive-N-factor algorithm support (by _Bufius_, _Zuikkis_ and
+  _veox_). For details on choosing the algorithm, see
+  `doc/configuration.md`.
+* Incognito mode to hide user name in NCurses interface - useful for
+  publishing screenshots. To enable, use `--incognito` on command line,
+  `incognito` in config.
 ## Version 4.1.0 - 7th February 2014
 
 * Writing configuration file from NCurses interface is broken!
