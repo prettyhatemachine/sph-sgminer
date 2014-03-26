@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include "algorithm.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/time.h>
@@ -237,7 +239,9 @@ enum drv_driver {
 };
 
 /* Use DRIVER_PARSE_COMMANDS to generate extern device_drv prototypes */
+#ifndef _MSC_VER
 DRIVER_PARSE_COMMANDS(DRIVER_PROTOTYPE)
+#endif 
 
 enum alive {
 	LIFE_WELL,
@@ -374,23 +378,6 @@ enum dev_enable {
 	DEV_RECOVER,
 };
 
-enum cl_kernels {
-	KL_NONE,
-	KL_ALEXKARNEW,	// kernels starting from this will have difficulty calculated by using litecoin algorithm
-	KL_ALEXKAROLD,
-	KL_CKOLIVAS,
-	KL_PSW,
-	KL_ZUIKKIS,
-	KL_QUARKCOIN,	// kernels starting from this will have difficulty calculated by using quarkcoin algorithm
-	KL_QUBITCOIN,
-	KL_INKCOIN,
-	KL_ANIMECOIN,
-	KL_DARKCOIN,	// kernels starting from this will have difficulty calculated by using bitcoin algorithm
-	KL_MYRIADCOIN_GROESTL,
-	KL_FUGUECOIN,
-	KL_GROESTLCOIN,
-};
-
 enum dev_reason {
 	REASON_THREAD_FAIL_INIT,
 	REASON_THREAD_ZERO_HASH,
@@ -455,7 +442,7 @@ struct cgpu_info {
 	int sgminer_id;
 	struct device_drv *drv;
 	int device_id;
-	char *name;
+	char *name;  /* GPU family codename. */
 	char *device_path;
 	void *device_data;
 
@@ -475,10 +462,11 @@ struct cgpu_info {
 
 	int64_t max_hashes;
 
-	const char *kname;
+	char *kernelname;  /* Human-readable kernel name. */
 	bool mapped;
 	int virtual_gpu;
 	int virtual_adl;
+
 	int intensity;
 	int xintensity;
 	int rawintensity;
@@ -486,7 +474,6 @@ struct cgpu_info {
 
 	cl_uint vwidth;
 	size_t work_size;
-	enum cl_kernels kernel;
 	cl_ulong max_alloc;
 
 	int opt_lg, lookup_gap;
@@ -590,7 +577,7 @@ static inline void string_elist_add(const char *s, struct list_head *head)
 {
 	struct string_elist *n;
 
-	n = calloc(1, sizeof(*n));
+	n = (struct string_elist *)calloc(1, sizeof(*n));
 	n->string = strdup(s);
 	n->free_me = true;
 	list_add_tail(&n->list, head);
@@ -611,8 +598,8 @@ static inline uint32_t swab32(uint32_t v)
 
 static inline void swap256(void *dest_p, const void *src_p)
 {
-	uint32_t *dest = dest_p;
-	const uint32_t *src = src_p;
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
 
 	dest[0] = src[7];
 	dest[1] = src[6];
@@ -626,8 +613,8 @@ static inline void swap256(void *dest_p, const void *src_p)
 
 static inline void swab256(void *dest_p, const void *src_p)
 {
-	uint32_t *dest = dest_p;
-	const uint32_t *src = src_p;
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
 
 	dest[0] = swab32(src[7]);
 	dest[1] = swab32(src[6]);
@@ -641,8 +628,8 @@ static inline void swab256(void *dest_p, const void *src_p)
 
 static inline void flip32(void *dest_p, const void *src_p)
 {
-	uint32_t *dest = dest_p;
-	const uint32_t *src = src_p;
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
 	int i;
 
 	for (i = 0; i < 8; i++)
@@ -651,8 +638,8 @@ static inline void flip32(void *dest_p, const void *src_p)
 
 static inline void flip64(void *dest_p, const void *src_p)
 {
-	uint32_t *dest = dest_p;
-	const uint32_t *src = src_p;
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
 	int i;
 
 	for (i = 0; i < 16; i++)
@@ -661,8 +648,8 @@ static inline void flip64(void *dest_p, const void *src_p)
 
 static inline void flip80(void *dest_p, const void *src_p)
 {
-	uint32_t *dest = dest_p;
-	const uint32_t *src = src_p;
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
 	int i;
 
 	for (i = 0; i < 20; i++)
@@ -671,8 +658,8 @@ static inline void flip80(void *dest_p, const void *src_p)
 
 static inline void flip128(void *dest_p, const void *src_p)
 {
-	uint32_t *dest = dest_p;
-	const uint32_t *src = src_p;
+	uint32_t *dest = (uint32_t *)dest_p;
+	const uint32_t *src = (uint32_t *)src_p;
 	int i;
 
 	for (i = 0; i < 32; i++)
@@ -988,10 +975,12 @@ extern bool opt_api_listen;
 extern bool opt_api_network;
 extern bool opt_delaynet;
 extern time_t last_getwork;
+extern bool opt_disable_client_reconnect;
 extern bool opt_restart;
 extern bool opt_worktime;
 extern int swork_id;
 extern int opt_tcp_keepalive;
+extern bool opt_incognito;
 
 #if LOCK_TRACKING
 extern pthread_mutex_t lockstat_lock;
@@ -1024,6 +1013,9 @@ extern bool fulltest(const unsigned char *hash, const unsigned char *target);
 extern int opt_queue;
 extern int opt_scantime;
 extern int opt_expiry;
+
+extern char *opt_algorithm;
+extern algorithm_t *algorithm;
 
 extern cglock_t control_lock;
 extern pthread_mutex_t hash_lock;
@@ -1180,7 +1172,7 @@ struct stratum_work {
 
 struct pool {
 	int pool_no;
-	char *poolname;
+	char *name;
 	int prio;
 	int accepted, rejected;
 	int seq_rejects;
@@ -1507,10 +1499,10 @@ extern struct api_data *api_add_percent(struct api_data *root, char *name, doubl
 extern struct api_data *api_add_avg(struct api_data *root, char *name, float *data, bool copy_data);
 
 enum diff_calc_mode {
-	DM_BITCOIN,
-	DM_QUARKCOIN,
 	DM_LITECOIN,
+	DM_QUARKCOIN,
 	DM_FUGUECOIN,
+	DM_DARKCOIN,
 };
 
 #endif /* __MINER_H__ */
