@@ -378,23 +378,6 @@ enum dev_enable {
 	DEV_RECOVER,
 };
 
-enum cl_kernels {
-	KL_NONE,
-	KL_ALEXKARNEW,	// kernels starting from this will have difficulty calculated by using litecoin algorithm
-	KL_ALEXKAROLD,
-	KL_CKOLIVAS,
-	KL_PSW,
-	KL_ZUIKKIS,
-	KL_QUARKCOIN,	// kernels starting from this will have difficulty calculated by using quarkcoin algorithm
-	KL_QUBITCOIN,
-	KL_INKCOIN,
-	KL_ANIMECOIN,
-	KL_DARKCOIN,	// kernels starting from this will have difficulty calculated by using bitcoin algorithm
-	KL_MYRIADCOIN_GROESTL,
-	KL_FUGUECOIN,
-	KL_GROESTLCOIN,
-};
-
 enum dev_reason {
 	REASON_THREAD_FAIL_INIT,
 	REASON_THREAD_ZERO_HASH,
@@ -491,7 +474,6 @@ struct cgpu_info {
 
 	cl_uint vwidth;
 	size_t work_size;
-	enum cl_kernels kernel;
 	cl_ulong max_alloc;
 
 	int opt_lg, lookup_gap;

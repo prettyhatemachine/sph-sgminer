@@ -59,8 +59,6 @@ char *curly = ":D";
 #include "scrypt.h"
 #include "pool.h"
 
-#include "darkcoin.h"
-
 #if defined(unix) || defined(__APPLE__)
 	#include <errno.h>
 	#include <fcntl.h>
@@ -4285,49 +4283,7 @@ void write_config(FILE *fcfg)
 		fputs("\",\n\"kernel\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++) {
 			fprintf(fcfg, "%s", i > 0 ? "," : "");
-			switch (gpus[i].kernel) {
-				case KL_NONE: // Shouldn't happen
-					break;
-				case KL_ALEXKARNEW:
-					fprintf(fcfg, ALEXKARNEW_KERNNAME);
-					break;
-				case KL_ALEXKAROLD:
-					fprintf(fcfg, ALEXKAROLD_KERNNAME);
-					break;
-				case KL_CKOLIVAS:
-					fprintf(fcfg, CKOLIVAS_KERNNAME);
-					break;
-				case KL_PSW:
-					fprintf(fcfg, PSW_KERNNAME);
-					break;
-				case KL_ZUIKKIS:
-					fprintf(fcfg, ZUIKKIS_KERNNAME);
-					break;
-				case KL_DARKCOIN:
-					fprintf(fcfg, DARKCOIN_KERNNAME);
-					break;
-				case KL_QUBITCOIN:
-					fprintf(fcfg, QUBITCOIN_KERNNAME);
-					break;
-				case KL_QUARKCOIN:
-					fprintf(fcfg, QUARKCOIN_KERNNAME);
-					break;
-				case KL_MYRIADCOIN_GROESTL:
-					fprintf(fcfg, MYRIADCOIN_GROESTL_KERNNAME);
-					break;
-				case KL_FUGUECOIN:
-					fprintf(fcfg, FUGUECOIN_KERNNAME);
-					break;
-				case KL_INKCOIN:
-					fprintf(fcfg, INKCOIN_KERNNAME);
-					break;
-				case KL_ANIMECOIN:
-					fprintf(fcfg, ANIMECOIN_KERNNAME);
-					break;
-				case KL_GROESTLCOIN:
-					fprintf(fcfg, GROESTLCOIN_KERNNAME);
-					break;
-			}
+			fprintf(fcfg, "%s", gpus[i].kernelname);
 		}
 
 		fputs("\",\n\"lookup-gap\" : \"", fcfg);

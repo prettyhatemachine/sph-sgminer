@@ -198,8 +198,8 @@ char *set_thread_concurrency(char *arg)
 char *set_kernel(char *arg)
 {
 	char *kern;
-        int i, device = 0;
 	char *nextptr;
+        int i, device = 0;
 
 	nextptr = strtok(arg, ",");
 	if (nextptr == NULL)
@@ -1368,7 +1368,6 @@ static bool opencl_thread_init(struct thr_info *thr)
 	struct opencl_thread_data *thrdata;
 	_clState *clState = clStates[thr_id];
 	cl_int status = 0;
-	int i = thr->id;
 	thrdata = (struct opencl_thread_data *)calloc(1, sizeof(*thrdata));
 	thr->cgpu_data = thrdata;
 	int buffersize = BUFFERSIZE;
@@ -1378,31 +1377,31 @@ static bool opencl_thread_init(struct thr_info *thr)
 		return false;
 	}
 
-	if (strcmp(clStates[i]->chosen_kernel, ALEXKARNEW_KERNNAME) == 0)
+	if (strcmp(clStates[thr_id]->chosen_kernel, ALEXKARNEW_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, ALEXKAROLD_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, ALEXKAROLD_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, CKOLIVAS_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, CKOLIVAS_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, ZUIKKIS_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, ZUIKKIS_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, PSW_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, PSW_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, DARKCOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, DARKCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, QUBITCOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, QUBITCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, QUARKCOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, QUARKCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, MYRIADCOIN_GROESTL_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, MYRIADCOIN_GROESTL_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, FUGUECOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, FUGUECOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, INKCOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, INKCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, ANIMECOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, ANIMECOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[i]->chosen_kernel, GROESTLCOIN_KERNNAME) == 0)
+	else if (strcmp(clStates[thr_id]->chosen_kernel, GROESTLCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else
 		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");	
