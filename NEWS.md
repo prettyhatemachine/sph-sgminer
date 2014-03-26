@@ -2,7 +2,29 @@
 
 ## Version 4.2.0 - TBA
 
+* Adaptive-N-factor algorithm support (by _Bufius_, _Zuikkis_ and
+  _veox_). For details on choosing the algorithm, see
+  `doc/configuration.md`.
+* Setting pool name with `poolname` is deprecated. Use `name` instead.
+* Allowed kernel names are no longer hard-coded. It is now possible to
+  use any `.cl` file.
+
+
+## Version 4.1.153 - 14th March 2014
+
+* Display pool URL instead of "Pool N" if no `poolname` specified.
+* Incognito mode to hide user name in NCurses interface - useful for
+  publishing screenshots. To enable, use `--incognito` on command line,
+  `incognito` in config or `[D][I]` in NCurses interface.
+* Support building in Microsoft Visual Studio 2010, perhaps other
+  versions as well (by _troky_). Documentation in `winbuild/README.txt`.
+* Support building in Cygwin (by _markuspeloquin_). Documentation in
+  `doc/cygwin-build.txt`.
 * Forward-port changes from `ckolivas/cgminer` up to 3.12.3.
+* Allow setting `worksize` for kernel `zuikkis`.
+* More log messages in pool handling.
+* Updated `doc/FAQ.md`.
+* Updated `example.conf`.
 
 
 ## Version 4.1.0 - 7th February 2014
