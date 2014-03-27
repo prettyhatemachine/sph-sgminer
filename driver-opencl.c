@@ -205,16 +205,26 @@ char *set_kernel(char *arg)
 	if (nextptr == NULL)
 		return "Invalid parameters for set kernel";
 
-	gpus[device++].kernelname = strdup(nextptr);
+	if (gpus[device].kernelname != NULL)
+		free(gpus[device].kernelname);
+	gpus[device].kernelname = strdup(nextptr);
+	device++;
 
-	while ((nextptr = strtok(NULL, ",")) != NULL)
-		gpus[device++].kernelname = strdup(nextptr);
+	while ((nextptr = strtok(NULL, ",")) != NULL) {
+		if (gpus[device].kernelname != NULL)
+			free(gpus[device].kernelname);
+		gpus[device].kernelname = strdup(nextptr);
+		device++;
+	}
 
 	/* If only one kernel name provided, use same for all GPUs. */
 	if (device == 1) {
-		for (i = device; i < MAX_GPUDEVICES; i++)
+		for (i = device; i < MAX_GPUDEVICES; i++) {
+			if (gpus[i].kernelname != NULL)
+				free(gpus[i].kernelname);
 			gpus[i].kernelname = strdup(gpus[0].kernelname);
-	}
+	       }
+        }
 
 	kern = strdup(gpus[0].kernelname);
 
@@ -296,7 +306,7 @@ char *set_gpu_threads(char *arg)
 		for (i = device; i < MAX_GPUDEVICES; i++)
 			gpus[i].threads = gpus[0].threads;
 	}
-	
+
 	return NULL;
 }
 
@@ -893,7 +903,7 @@ retry: // TODO: refactor
 
 		intvar = curses_input("Set GPU scan intensity (d or "
 							  MIN_INTENSITY_STR " -> "
-							  MAX_INTENSITY_STR ")");		
+							  MAX_INTENSITY_STR ")");
 		if (!intvar) {
 			wlogprint("Invalid input\n");
 			goto retry;
@@ -950,14 +960,14 @@ retry: // TODO: refactor
 	} else if (!strncasecmp(&input, "a", 1)) {
 		int rawintensity;
 		char *intvar;
-		
+
 		if (selected)
 		  selected = curses_int("Select GPU to change raw intensity on");
 		if (selected < 0 || selected >= nDevs) {
 		  wlogprint("Invalid selection\n");
 		  goto retry;
 		}
-		
+
 		intvar = curses_input("Set raw GPU scan intensity (" MIN_RAWINTENSITY_STR " -> " MAX_RAWINTENSITY_STR ")");
 		if (!intvar) {
 		  wlogprint("Invalid input\n");
@@ -1325,7 +1335,7 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 		cgpu->name = strdup(name);
 	if (!cgpu->kernelname)
 		cgpu->kernelname = strdup("ckolivas");
-	
+
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
 	get_datestamp(cgpu->init, sizeof(cgpu->init), &now);
@@ -1376,7 +1386,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 	else if (strcmp(gpu->kernelname, GROESTLCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else
-		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");	
+		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");
 
 	thrdata->res = (uint32_t *)calloc(buffersize, 1);
 

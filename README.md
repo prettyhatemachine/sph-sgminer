@@ -27,9 +27,12 @@ Documentation is available in directory `doc`. It is organised by topics:
 * `configuration.md` for (largely incomplete) detailed information on all
   configuration options;
 * `FAQ.md` for frequently asked questions;
-* `GPU` for semi-obsolete information on GPU configuration options and mining SHA256d-based coins;
-* `KERNEL.md` for OpenCL kernel-related information;
-* `MINING.md` for how to find the right balance in GPU configuration to mine Scrypt-based coins effectively;
+* `GPU` for semi-obsolete information on GPU configuration options and mining
+  SHA256d-based coins;
+* `kernel.md` for OpenCL kernel-related information, including development
+  procedure;
+* `MINING.md` for how to find the right balance in GPU configuration to mine
+  Scrypt-based coins efficiently;
 * `windows-build.txt` for information on how to build on Windows.
 
 Note that **most of the documentation is outdated or incomplete**. If
