@@ -4716,7 +4716,7 @@ retry:
 	if (pool_strategy == POOL_ROTATE)
 		wlogprint("Set to rotate every %d minutes\n", opt_rotate_period);
 	wlogprint("[F]ailover only %s\n", opt_fail_only ? "enabled" : "disabled");
-	wlogprint("Pool [A]dd [R]emove [D]isable [E]nable [Q]uota change\n");
+	wlogprint("Pool [A]dd [R]emove [D]isable [E]nable Edi[t] name [Q]uota change\n");
 	wlogprint("[C]hange management strategy [S]witch pool [I]nformation\n");
 	wlogprint("Or press any other key to continue\n");
 	logwin_update();
@@ -4820,6 +4820,26 @@ retry:
 		}
 		pool->quota = selected;
 		adjust_quota_gcd();
+		goto updated;
+	} else if (!strncasecmp(&input, "t", 1)) {
+		char *str;
+		selected = curses_int("Select pool number");
+		if (selected < 0 || selected >= total_pools) {
+			wlogprint("Invalid selection\n");
+			goto retry;
+		}
+		pool = pools[selected];
+		str = curses_input("New name");
+		if (!str) {
+			wlogprint("Invalid new name\n");
+			goto retry;
+		}
+		if (strcmp(str, "-1")) {
+			pool->name = "";
+		} else {
+			/* we cant free the old memory, because it may be a fixed string */
+			pool->name = str;
+		}
 		goto updated;
 	} else if (!strncasecmp(&input, "f", 1)) {
 		opt_fail_only ^= true;
