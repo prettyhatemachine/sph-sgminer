@@ -4846,7 +4846,7 @@ retry:
 			wlogprint("Invalid new name\n");
 			goto retry;
 		}
-		if (strcmp(str, "-1")) {
+		if (!strcmp(str, "-1")) {
 			pool->name = "";
 		} else {
 			/* we cant free the old memory, because it may be a fixed string */
