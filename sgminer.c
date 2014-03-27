@@ -2345,7 +2345,13 @@ static void curses_print_status(void)
 
 static void adj_width(int var, int *length)
 {
-	if ((int)(log10((double)var) + 1) > *length)
+	if ((int)(log10(var) + 1) > *length)
+		(*length)++;
+}
+
+static void adj_fwidth(float var, int *length)
+{
+	if ((int)(log10(var) + 1) > *length)
 		(*length)++;
 }
 
@@ -2353,7 +2359,7 @@ static int dev_width;
 
 static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 {
-	static int drwidth = 5, hwwidth = 1, wuwidth = 1;
+	static int dawidth = 1, drwidth = 1, dpwidth = 5, hwwidth = 1, wuwidth = 1;
 	char logline[256];
 	char displayed_hashes[16], displayed_rolling[16];
 	float reject_pct = 0.0;
@@ -2408,15 +2414,19 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	else
 		cg_wprintw(statuswin, "%6s", displayed_rolling);
 
+	adj_fwidth(cgpu->diff_accepted, &dawidth);
+	adj_fwidth(cgpu->diff_rejected, &drwidth);
 	if ((cgpu->diff_accepted + cgpu->diff_rejected) > 0)
 		reject_pct = (cgpu->diff_rejected / (cgpu->diff_accepted + cgpu->diff_rejected)) * 100;
 
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(wu, &wuwidth);
 
-	cg_wprintw(statuswin, "/%6sh/s | R:%*.1f%% HW:%*d WU:%*.1f/m",
+	cg_wprintw(statuswin, "/%6sh/s | A:%*.0f R:%*.0f (%*.1f%%) HW:%*d WU:%*.1f/m",
 			displayed_hashes,
-			drwidth, reject_pct,
+			dawidth, cgpu->diff_accepted,
+			drwidth, cgpu->diff_rejected,
+			dpwidth, reject_pct,
 			hwwidth, cgpu->hw_errors,
 			wuwidth + 2, wu);
 	logline[0] = '\0';
