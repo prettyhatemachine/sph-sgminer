@@ -415,8 +415,6 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	if (cgpu->kernelname == NULL) {
 		applog(LOG_INFO, "No kernel specified, defaulting to ckolivas");
 		cgpu->kernelname = strdup("ckolivas");
-	} else {
-		clState->chosen_kernel = cgpu->kernelname;
 	}
 
 

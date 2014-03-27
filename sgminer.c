@@ -538,7 +538,7 @@ struct pool *add_pool(void)
 
 	/* Default pool name */
 	char buf[32];
-	sprintf(buf, "", pool->pool_no);
+	sprintf(buf, "");
 	pool->name = strdup(buf);
 
 	pools = (struct pool **)realloc(pools, sizeof(struct pool *) * (total_pools + 2));
@@ -1457,20 +1457,18 @@ static char *parse_config(json_t *config, bool fileconf, int parent_iteration)
 				int n, size = json_array_size(val);
 
 				for (n = 0; n < size && !err; n++) {
-					if (json_is_string(json_array_get(val, n))) {
+					if (json_is_string(json_array_get(val, n)))
 						err = opt->cb_arg(json_string_value(json_array_get(val, n)), opt->u.arg);
-					}
 					else if (json_is_object(json_array_get(val, n)))
 					{
 						err = parse_config(json_array_get(val, n), false, n);
 						json_array_index = parent_iteration;
 					}
 				}
-			} else if ((opt->type & OPT_NOARG) && json_is_boolean(val)) {
+			} else if ((opt->type & OPT_NOARG) && json_is_true(val))
 				err = opt->cb(opt->u.arg);
-			} else {
+			else
 				err = "Invalid value";
-			}
 
 			if (err) {
 				/* Allow invalid values to be in configuration
@@ -2182,7 +2180,7 @@ static void get_statline(char *buf, size_t bufsiz, struct cgpu_info *cgpu)
 
 	snprintf(buf, bufsiz, "%s%d ", cgpu->drv->name, cgpu->device_id);
 	cgpu->drv->get_statline_before(buf, bufsiz, cgpu);
-	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.3f R:%.3f HW:%d WU:%.3f/m",
+	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d WU:%.3f/m",
 		opt_log_interval,
 		displayed_rolling,
 		displayed_hashes,
@@ -5077,7 +5075,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, sizeof(displayed_rolling), 4);
 
 	snprintf(statusline, sizeof(statusline),
-		"%s(%ds):%s (avg):%sh/s | A:%.3f  R:%.3f  HW:%d  WU:%.3f/m",
+		"%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  WU:%.3f/m",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_diff_rejected, hw_errors,

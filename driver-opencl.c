@@ -1324,35 +1324,7 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 	if (!cgpu->name)
 		cgpu->name = strdup(name);
 	if (!cgpu->kernelname)
-	{
-				
-		if (strcmp(clStates[i]->chosen_kernel, ALEXKARNEW_KERNNAME) == 0) 
-			cgpu->kernelname = strdup(ALEXKARNEW_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, ALEXKAROLD_KERNNAME) == 0)
-			cgpu->kernelname = strdup(ALEXKAROLD_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, CKOLIVAS_KERNNAME) == 0)
-			cgpu->kernelname = strdup(CKOLIVAS_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, ZUIKKIS_KERNNAME) == 0)
-			cgpu->kernelname = strdup(ZUIKKIS_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, PSW_KERNNAME) == 0)
-			cgpu->kernelname = strdup(PSW_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, DARKCOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(DARKCOIN_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, QUBITCOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(QUBITCOIN_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, QUARKCOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(QUARKCOIN_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, MYRIADCOIN_GROESTL_KERNNAME) == 0)
-			cgpu->kernelname = strdup(MYRIADCOIN_GROESTL_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, FUGUECOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(FUGUECOIN_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, INKCOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(INKCOIN_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, ANIMECOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(ANIMECOIN_KERNNAME);
-		else if (strcmp(clStates[i]->chosen_kernel, GROESTLCOIN_KERNNAME) == 0)
-			cgpu->kernelname = strdup(GROESTLCOIN_KERNNAME);		
-	}
+		cgpu->kernelname = strdup("ckolivas");
 	
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
@@ -1377,31 +1349,31 @@ static bool opencl_thread_init(struct thr_info *thr)
 		return false;
 	}
 
-	if (strcmp(clStates[thr_id]->chosen_kernel, ALEXKARNEW_KERNNAME) == 0)
+	if (strcmp(gpu->kernelname, ALEXKARNEW_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, ALEXKAROLD_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, ALEXKAROLD_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, CKOLIVAS_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, CKOLIVAS_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, ZUIKKIS_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, ZUIKKIS_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, PSW_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, PSW_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, DARKCOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, DARKCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, QUBITCOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, QUBITCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, QUARKCOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, QUARKCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, MYRIADCOIN_GROESTL_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, MYRIADCOIN_GROESTL_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, FUGUECOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, FUGUECOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, INKCOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, INKCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, ANIMECOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, ANIMECOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(clStates[thr_id]->chosen_kernel, GROESTLCOIN_KERNNAME) == 0)
+	else if (strcmp(gpu->kernelname, GROESTLCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else
 		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");	
