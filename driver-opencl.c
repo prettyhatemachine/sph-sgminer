@@ -1157,7 +1157,7 @@ static void opencl_detect(bool hotplug)
 {
 	int i;
 
-	if (hotplug)
+	if (opt_nogpu || hotplug)
 		return;
 
 	nDevs = clDevicesNum();

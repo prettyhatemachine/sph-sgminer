@@ -999,6 +999,7 @@ extern bool opt_delaynet;
 extern time_t last_getwork;
 extern bool opt_disable_client_reconnect;
 extern bool opt_restart;
+extern bool opt_nogpu;
 extern bool opt_worktime;
 #ifdef USE_GRIDSEED
 extern char *opt_gridseed_options;

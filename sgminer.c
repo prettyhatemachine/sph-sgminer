@@ -119,6 +119,7 @@ int opt_dynamic_interval = 7;
 int opt_g_threads = -1;
 int gpu_threads;
 bool opt_restart = true;
+bool opt_nogpu;
 
 struct list_head scan_devices;
 static bool devices_enabled[MAX_DEVICES];
@@ -1212,6 +1213,9 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--device|-d",
 		     set_devices, NULL, NULL,
 	             "Select device to use, one value, range and/or comma separated (e.g. 0-2,4) default: all"),
+	OPT_WITHOUT_ARG("--disable-gpu|-G",
+			opt_set_bool, &opt_nogpu,
+			"Disable GPU mining even if suitable devices exist"),
 	OPT_WITHOUT_ARG("--disable-rejecting",
 			opt_set_bool, &opt_disable_pool,
 			"Automatically disable pools that continually reject shares"),
