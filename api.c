@@ -145,7 +145,11 @@ static const char *NULLSTR = "(null)";
 static const char *TRUESTR = "true";
 static const char *FALSESTR = "false";
 
-static const char *DEVICECODE = "GPU ";
+static const char *DEVICECODE = "GPU "
+#ifdef USE_GRIDSEED
+			"GSD "
+#endif
+	;
 
 static const char *OSINFO =
 #if defined(__linux__)
@@ -180,6 +184,7 @@ static const char *OSINFO =
 #define _MINECOIN	"COIN"
 #define _DEBUGSET	"DEBUG"
 #define _SETCONFIG	"SETCONFIG"
+#define _USBSTATS	"USBSTATS"
 
 static const char ISJSON = '{';
 #define JSON0		"{"
@@ -211,7 +216,7 @@ static const char ISJSON = '{';
 #define JSON_MINECOIN	JSON1 _MINECOIN JSON2
 #define JSON_DEBUGSET	JSON1 _DEBUGSET JSON2
 #define JSON_SETCONFIG	JSON1 _SETCONFIG JSON2
-
+#define JSON_USBSTATS	JSON1 _USBSTATS JSON2
 #define JSON_END	JSON4 JSON5
 #define JSON_END_TRUNCATED	JSON4_TRUNCATED JSON5
 #define JSON_BETWEEN_JOIN	","
@@ -293,13 +298,19 @@ static const char *JSON_PARAMETER = "parameter";
 #define MSG_INVNUM 84
 #define MSG_CONPAR 85
 #define MSG_CONVAL 86
-
+#define MSG_USBSTA 87
 #define MSG_NOUSTA 88
 
 #define MSG_ZERMIS 94
 #define MSG_ZERINV 95
 #define MSG_ZERSUM 96
 #define MSG_ZERNOSUM 97
+#define MSG_PGAUSBNODEV 98
+#define MSG_INVHPLG 99
+#define MSG_HOTPLUG 100
+#define MSG_DISHPLG 101
+#define MSG_NOHPLG 102
+#define MSG_MISHPLG 103
 
 #define MSG_INVNEG 121
 #define MSG_SETQUOTA 122
@@ -415,11 +426,17 @@ struct CODES {
  { SEVERITY_SUCC,  MSG_SETQUOTA,PARAM_SET,	"Set pool '%s' to quota %d'" },
  { SEVERITY_ERR,   MSG_CONPAR,	PARAM_NONE,	"Missing config parameters 'name,N'" },
  { SEVERITY_ERR,   MSG_CONVAL,	PARAM_STR,	"Missing config value N for '%s,N'" },
+ { SEVERITY_SUCC,  MSG_USBSTA,	PARAM_NONE,	"USB Statistics" },
  { SEVERITY_INFO,  MSG_NOUSTA,	PARAM_NONE,	"No USB Statistics" },
  { SEVERITY_ERR,   MSG_ZERMIS,	PARAM_NONE,	"Missing zero parameters" },
  { SEVERITY_ERR,   MSG_ZERINV,	PARAM_STR,	"Invalid zero parameter '%s'" },
  { SEVERITY_SUCC,  MSG_ZERSUM,	PARAM_STR,	"Zeroed %s stats with summary" },
  { SEVERITY_SUCC,  MSG_ZERNOSUM, PARAM_STR,	"Zeroed %s stats without summary" },
+ { SEVERITY_ERR,   MSG_INVHPLG,	PARAM_STR,	"Invalid value for hotplug (%s) must be 0..9999" },
+ { SEVERITY_SUCC,  MSG_HOTPLUG,	PARAM_INT,	"Hotplug check set to %ds" },
+ { SEVERITY_SUCC,  MSG_DISHPLG,	PARAM_NONE,	"Hotplug disabled" },
+ { SEVERITY_WARN,  MSG_NOHPLG,	PARAM_NONE,	"Hotplug is not available" },
+ { SEVERITY_ERR,   MSG_MISHPLG,	PARAM_NONE,	"Missing hotplug parameter" },
  { SEVERITY_SUCC,  MSG_LOCKOK,	PARAM_NONE,	"Lock stats created" },
  { SEVERITY_WARN,  MSG_LOCKDIS,	PARAM_NONE,	"Lock stats not enabled" },
  { SEVERITY_FAIL, 0, (enum code_parameters)0, NULL }
@@ -1601,6 +1618,14 @@ static void minerconfig(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __
 	root = api_add_int(root, "ScanTime", &opt_scantime, false);
 	root = api_add_int(root, "Queue", &opt_queue, false);
 	root = api_add_int(root, "Expiry", &opt_expiry, false);
+#ifdef USE_USBUTILS
+	if (hotplug_time == 0)
+		root = api_add_const(root, "Hotplug", DISABLED, false);
+	else
+		root = api_add_int(root, "Hotplug", &hotplug_time, false);
+#else
+	root = api_add_const(root, "Hotplug", NONE, false);
+#endif
 
 	root = print_data(root, buf, isjson, false);
 	io_add(io_data, buf);
@@ -2781,6 +2806,64 @@ static int itemstats(struct io_data *io_data, int i, char *id, struct sgminer_st
 	if (extra)
 		root = api_add_extra(root, extra);
 
+	if (cgpu) {
+#ifdef USE_USBUTILS
+		char details[256];
+
+		if (cgpu->usbinfo.pipe_count)
+			snprintf(details, sizeof(details),
+				 "%"PRIu64" %"PRIu64"/%"PRIu64"/%"PRIu64" %lu",
+				 cgpu->usbinfo.pipe_count,
+				 cgpu->usbinfo.clear_err_count,
+				 cgpu->usbinfo.retry_err_count,
+				 cgpu->usbinfo.clear_fail_count,
+				 (unsigned long)(cgpu->usbinfo.last_pipe));
+		else
+			strcpy(details, "0");
+
+		root = api_add_string(root, "USB Pipe", details, true);
+
+		snprintf(details, sizeof(details),
+			 "r%"PRIu64" %.6f w%"PRIu64" %.6f",
+			 cgpu->usbinfo.read_delay_count,
+			 cgpu->usbinfo.total_read_delay,
+			 cgpu->usbinfo.write_delay_count,
+			 cgpu->usbinfo.total_write_delay);
+
+		root = api_add_string(root, "USB Delay", details, true);
+
+		if (cgpu->usbinfo.usb_tmo[0].count == 0 &&
+			cgpu->usbinfo.usb_tmo[1].count == 0 &&
+			cgpu->usbinfo.usb_tmo[2].count == 0) {
+				snprintf(details, sizeof(details),
+					 "%"PRIu64" 0", cgpu->usbinfo.tmo_count);
+		} else {
+			snprintf(details, sizeof(details),
+				 "%"PRIu64" %d=%d/%d/%d/%"PRIu64"/%"PRIu64
+				 " %d=%d/%d/%d/%"PRIu64"/%"PRIu64
+				 " %d=%d/%d/%d/%"PRIu64"/%"PRIu64" ",
+				 cgpu->usbinfo.tmo_count,
+				 USB_TMO_0, cgpu->usbinfo.usb_tmo[0].count,
+				 cgpu->usbinfo.usb_tmo[0].min_tmo,
+				 cgpu->usbinfo.usb_tmo[0].max_tmo,
+				 cgpu->usbinfo.usb_tmo[0].total_over,
+				 cgpu->usbinfo.usb_tmo[0].total_tmo,
+				 USB_TMO_1, cgpu->usbinfo.usb_tmo[1].count,
+				 cgpu->usbinfo.usb_tmo[1].min_tmo,
+				 cgpu->usbinfo.usb_tmo[1].max_tmo,
+				 cgpu->usbinfo.usb_tmo[1].total_over,
+				 cgpu->usbinfo.usb_tmo[1].total_tmo,
+				 USB_TMO_2, cgpu->usbinfo.usb_tmo[2].count,
+				 cgpu->usbinfo.usb_tmo[2].min_tmo,
+				 cgpu->usbinfo.usb_tmo[2].max_tmo,
+				 cgpu->usbinfo.usb_tmo[2].total_over,
+				 cgpu->usbinfo.usb_tmo[2].total_tmo);
+		}
+
+		root = api_add_string(root, "USB tmo", details, true);
+#endif
+	}
+
 	root = print_data(root, buf, isjson, isjson && (i > 0));
 	io_add(io_data, buf);
 
@@ -2988,6 +3071,46 @@ static void setconfig(struct io_data *io_data, __maybe_unused SOCKETTYPE c, char
 	message(io_data, MSG_SETCONFIG, value, param, isjson);
 }
 
+static void usbstats(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __maybe_unused char *param, bool isjson, __maybe_unused char group)
+{
+	struct api_data *root = NULL;
+
+#ifdef USE_USBUTILS
+	char buf[TMPBUFSIZ];
+	bool io_open = false;
+	int count = 0;
+
+	root = api_usb_stats(&count);
+#endif
+
+	if (!root) {
+		message(io_data, MSG_NOUSTA, 0, NULL, isjson);
+		return;
+	}
+
+#ifdef USE_USBUTILS
+	message(io_data, MSG_USBSTA, 0, NULL, isjson);
+
+	if (isjson)
+		io_open = io_add(io_data, COMSTR JSON_USBSTATS);
+
+	root = print_data(root, buf, isjson, false);
+	io_add(io_data, buf);
+
+	while (42) {
+		root = api_usb_stats(&count);
+		if (!root)
+			break;
+
+		root = print_data(root, buf, isjson, isjson);
+		io_add(io_data, buf);
+	}
+
+	if (isjson && io_open)
+		io_close(io_data);
+#endif
+}
+
 static void dozero(struct io_data *io_data, __maybe_unused SOCKETTYPE c, char *param, bool isjson, __maybe_unused char group)
 {
 	if (param == NULL || *param == '\0') {
@@ -3036,6 +3159,34 @@ static void dozero(struct io_data *io_data, __maybe_unused SOCKETTYPE c, char *p
 		message(io_data, MSG_ZERNOSUM, 0, all ? "All" : "BestShare", isjson);
 }
 
+static void dohotplug(struct io_data *io_data, __maybe_unused SOCKETTYPE c, __maybe_unused char *param, bool isjson, __maybe_unused char group)
+{
+#ifdef USE_USBUTILS
+	int value;
+
+	if (param == NULL || *param == '\0') {
+		message(io_data, MSG_MISHPLG, 0, NULL, isjson);
+		return;
+	}
+
+	value = atoi(param);
+	if (value < 0 || value > 9999) {
+		message(io_data, MSG_INVHPLG, 0, param, isjson);
+		return;
+	}
+
+	hotplug_time = value;
+
+	if (value)
+		message(io_data, MSG_HOTPLUG, value, NULL, isjson);
+	else
+		message(io_data, MSG_DISHPLG, 0, NULL, isjson);
+#else
+	message(io_data, MSG_NOHPLG, 0, NULL, isjson);
+	return;
+#endif
+}
+
 static void checkcommand(struct io_data *io_data, __maybe_unused SOCKETTYPE c, char *param, bool isjson, char group);
 
 struct CMDS {
@@ -3078,7 +3229,9 @@ struct CMDS {
 	{ "coin",		minecoin,	false,	true },
 	{ "debug",		debugstate,	true,	false },
 	{ "setconfig",		setconfig,	true,	false },
+	{ "usbstats",		usbstats,	false,	true },
 	{ "zero",		dozero,		true,	false },
+	{ "hotplug",		dohotplug,	true,	false },
 	{ "lockstats",		lockstats,	true,	true },
 	{ NULL,			NULL,		false,	false }
 };

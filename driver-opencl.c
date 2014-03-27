@@ -1157,6 +1157,9 @@ static void opencl_detect(bool hotplug)
 {
 	int i;
 
+	if (hotplug)
+		return;
+
 	nDevs = clDevicesNum();
 	if (nDevs < 0) {
 		applog(LOG_ERR, "clDevicesNum returned error, no GPUs usable");
