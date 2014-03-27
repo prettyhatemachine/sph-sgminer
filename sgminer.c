@@ -130,6 +130,7 @@ int total_devices;
 int zombie_devs;
 static int most_devices;
 struct cgpu_info **devices;
+bool have_opencl;
 int mining_threads;
 
 #ifdef HAVE_CURSES
@@ -2340,7 +2341,8 @@ static void curses_print_status(void)
 	mvwhline(statuswin, ++line, 0, '-', 80);
 	mvwhline(statuswin, statusy - 1, 0, '-', 80);
 
-	cg_mvwprintw(statuswin, devcursor - 1, 0, "[P]ool management [G]PU management [S]ettings [D]isplay options [Q]uit");
+	cg_mvwprintw(statuswin, devcursor - 1, 0, "[P]ool management %s[S]ettings [D]isplay options [Q]uit",
+		have_opencl ? "[G]PU management " : "");
 }
 
 static void adj_width(int var, int *length)
@@ -5090,7 +5092,7 @@ static void *input_thread(void __maybe_unused *userdata)
 			display_pools();
 		else if (!strncasecmp(&input, "s", 1))
 			set_options();
-		else if (!strncasecmp(&input, "g", 1))
+		else if (have_opencl && !strncasecmp(&input, "g", 1))
 			manage_gpu();
 		if (opt_realquiet) {
 			disable_curses();

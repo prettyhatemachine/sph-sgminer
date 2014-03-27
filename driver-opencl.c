@@ -48,6 +48,7 @@ extern bool opt_loginput;
 extern char *opt_kernel_path;
 extern int gpur_thr_id;
 extern bool opt_noadl;
+extern bool have_opencl;
 
 extern void *miner_thread(void *userdata);
 extern int dev_from_id(int thr_id);
@@ -1299,6 +1300,8 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
 	get_datestamp(cgpu->init, sizeof(cgpu->init), &now);
+
+	have_opencl = true;
 
 	return true;
 }
