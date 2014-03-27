@@ -416,6 +416,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	}
 
 
+
 	if (strcmp(cgpu->kernelname, ALEXKARNEW_KERNNAME) == 0){
 		applog(LOG_WARNING, "Kernel alexkarnew is experimental.");
 		strcpy(filename, ALEXKARNEW_KERNNAME".cl");
