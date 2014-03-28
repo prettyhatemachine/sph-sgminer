@@ -51,6 +51,7 @@ sgminer_SOURCES += adl.c adl.h adl_functions.h
 sgminer_SOURCES += pool.c pool.h
 sgminer_SOURCES += algorithm.c algorithm.h
 sgminer_SOURCES += scrypt.c scrypt.h
+sgminer_SOURCES += scrypt-jane.c scrypt-jane.h
 sgminer_SOURCES += kernel/*.cl
 
 if WANT_USBUTILS

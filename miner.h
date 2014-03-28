@@ -1057,6 +1057,11 @@ extern cglock_t cgusb_fd_lock;
 extern char *opt_algorithm;
 extern algorithm_t *algorithm;
 
+/* scrypt-jane */
+extern unsigned int sj_minNf;
+extern unsigned int sj_maxNf;
+extern unsigned int sj_startTime;
+
 extern cglock_t control_lock;
 extern pthread_mutex_t hash_lock;
 extern pthread_mutex_t console_lock;
@@ -1122,6 +1127,7 @@ extern struct thr_info *control_thr;
 extern struct thr_info **mining_thr;
 extern struct cgpu_info gpus[MAX_GPUDEVICES];
 extern int gpu_threads;
+extern bool opt_scrypt_jane;
 extern double total_secs;
 extern int mining_threads;
 extern int total_devices;
@@ -1537,5 +1543,7 @@ extern struct api_data *api_add_hs(struct api_data *root, char *name, double *da
 extern struct api_data *api_add_diff(struct api_data *root, char *name, double *data, bool copy_data);
 extern struct api_data *api_add_percent(struct api_data *root, char *name, double *data, bool copy_data);
 extern struct api_data *api_add_avg(struct api_data *root, char *name, float *data, bool copy_data);
+
+extern unsigned char sj_GetNfactor(int nTimestamp);
 
 #endif /* __MINER_H__ */

@@ -34,6 +34,8 @@
 #include "adl.h"
 #include "util.h"
 
+#include "scrypt-jane.h"	/* sj_be32enc_vect */
+
 /* TODO: cleanup externals ********************/
 
 #ifdef HAVE_CURSES
@@ -1009,8 +1011,27 @@ static cl_int queue_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused c
 	cl_uint le_target;
 	cl_int status = 0;
 
+	uint32_t data[20];
+	unsigned int timestamp;
+	cl_uint nfactor;
+ 	
+	if (opt_scrypt_jane) {
+		timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
+ 		nfactor = sj_GetNfactor(timestamp);
+		nfactor = (1 << (nfactor + 1));
+	}
+
 	le_target = *(cl_uint *)(blk->work->device_target + 28);
-	clState->cldata = blk->work->data;
+
+	if (!opt_scrypt_jane) {
+		clState->cldata = blk->work->data;
+	} else {
+		/* scrypt-jane */
+		applog(LOG_DEBUG, "Timestamp: %d, Nfactor: %d, Target: %x", timestamp, nfactor, le_target);
+		sj_be32enc_vect(data, (const uint32_t *)blk->work->data, 19);
+		clState->cldata = data;
+	}		
+
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
@@ -1019,6 +1040,8 @@ static cl_int queue_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused c
 	CL_SET_VARG(4, &midstate[0]);
 	CL_SET_VARG(4, &midstate[16]);
 	CL_SET_ARG(le_target);
+	if (opt_scrypt_jane)
+		CL_SET_ARG(nfactor);
 
 	return status;
 }
@@ -1295,7 +1318,7 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 	if (!cgpu->name)
 		cgpu->name = strdup(name);
 	if (!cgpu->kernelname)
-		cgpu->kernelname = strdup("ckolivas");
+		cgpu->kernelname = opt_scrypt_jane ? strdup("scrypt-jane") : strdup("ckolivas");
 
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
@@ -1371,6 +1394,8 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	int64_t hashes;
 	int found = FOUND;
 	int buffersize = BUFFERSIZE;
+	uint32_t *o;
+	uint32_t target;
 
 	/* Windows' timer resolution is only 15ms so oversample 5x */
 	if (gpu->dynamic && (++gpu->intervals * dynamic_us) > 70000) {
@@ -1405,6 +1430,9 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		size_t global_work_offset[1];
 
 		global_work_offset[0] = work->blk.nonce;
+		if (opt_scrypt_jane)
+			applog(LOG_DEBUG, "Nonce: %x, Global work size: %x, local work size: %x", work->blk.nonce, (unsigned)globalThreads[0], (unsigned)localThreads[0]);
+
 		status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, global_work_offset,
 						globalThreads, localThreads, 0,  NULL, NULL);
 	} else
@@ -1420,6 +1448,12 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	if (unlikely(status != CL_SUCCESS)) {
 		applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
 		return -1;
+	}
+
+	if (opt_scrypt_jane) {
+		o = thrdata->res;
+		target = *(uint32_t *)(work->target + 28);
+		applog(LOG_DEBUG, "Nonce: %x, Output buffer: %x %x %x %x %x %x %x %x Target: %x", work->blk.nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], target);
 	}
 
 	/* The amount of work scanned can fluctuate when intensity changes
