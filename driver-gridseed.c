@@ -799,6 +799,8 @@ static bool gridseed_send_task(struct cgpu_info *gridseed, struct work *work)
 
 static void gridseed_detect(bool __maybe_unused hotplug)
 {
+	if (opt_noasic)
+		return;
 	usb_detect(&gridseed_drv, gridseed_detect_one);
 }
 
