@@ -2191,9 +2191,9 @@ static void get_statline(char *buf, size_t bufsiz, struct cgpu_info *cgpu)
 	suffix_string(dh64, displayed_hashes, sizeof(displayed_hashes), 4);
 	suffix_string(dr64, displayed_rolling, sizeof(displayed_rolling), 4);
 
-	snprintf(buf, bufsiz, "%s%d ", cgpu->drv->name, cgpu->device_id);
+	snprintf(buf, bufsiz, "%s%d", cgpu->drv->name, cgpu->device_id);
 	cgpu->drv->get_statline_before(buf, bufsiz, cgpu);
-	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d WU:%.3f/m",
+	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.2f R:%.1f HW:%.3d WU:%.3f/m",
 		opt_log_interval,
 		displayed_rolling,
 		displayed_hashes,
@@ -2232,7 +2232,7 @@ static void curses_print_status(void)
 	cg_mvwprintw(statuswin, line, 0, PACKAGE " " VERSION " - Started: %s", datestamp);
 	wattroff(statuswin, A_BOLD);
 
-	mvwhline(statuswin, ++line, 0, '-', 80);
+	mvwhline(statuswin, ++line, 0, '-', 95);
 
 	cg_mvwprintw(statuswin, ++line, 0, "%s", statusline);
 	wclrtoeol(statuswin);
@@ -2258,8 +2258,8 @@ static void curses_print_status(void)
 	cg_mvwprintw(statuswin, ++line, 0, "Block: %s...  Diff:%s  Started: %s  Best share: %s   ",
 		     prev_block, block_diff, blocktime, best_share);
 			 
-	mvwhline(statuswin, ++line, 0, '-', 80);
-	mvwhline(statuswin, statusy - 1, 0, '-', 80);
+	mvwhline(statuswin, ++line, 0, '-', 95);
+	mvwhline(statuswin, statusy - 1, 0, '-', 95);
 
 	cg_mvwprintw(statuswin, devcursor - 1, 0, "[P]ool management [G]PU management [S]ettings [D]isplay options [Q]uit");
 }
@@ -2270,11 +2270,17 @@ static void adj_width(int var, int *length)
 		(*length)++;
 }
 
+static void adj_fwidth(float var, int *length)
+{
+	if ((int)(log10(var) + 1) > *length)
+		(*length)++;
+}
+  
 static int dev_width;
 
 static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 {
-	static int drwidth = 5, hwwidth = 1, wuwidth = 1;
+	static int dawidth = 1, dpwidth = 3, hwwidth = 1, wuwidth = 1;
 	char logline[256];
 	char displayed_hashes[16], displayed_rolling[16];
 	float reject_pct = 0.0;
@@ -2303,7 +2309,7 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	wu = cgpu->diff1 / dev_runtime * 60;
 
 	wmove(statuswin, devcursor + count, 0);
-	cg_wprintw(statuswin, "%s %*d: ", cgpu->drv->name, dev_width, cgpu->device_id);
+	cg_wprintw(statuswin, "%s %*d:", cgpu->drv->name, dev_width, cgpu->device_id);
 	logline[0] = '\0';
 	cgpu->drv->get_statline_before(logline, sizeof(logline), cgpu);
 	cg_wprintw(statuswin, "%s", logline);
@@ -2324,15 +2330,17 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	else
 		cg_wprintw(statuswin, "%6s", displayed_rolling);
 
+	adj_fwidth(cgpu->diff_accepted, &dawidth);
 	if ((cgpu->diff_accepted + cgpu->diff_rejected) > 0)
 		reject_pct = (cgpu->diff_rejected / (cgpu->diff_accepted + cgpu->diff_rejected)) * 100;
 
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(wu, &wuwidth);
 
-	cg_wprintw(statuswin, "/%6sh/s | R:%*.1f%% HW:%*d WU:%*.3f/m",
+	cg_wprintw(statuswin, "/%6sh/s|A:%*.2f R:%*.2f%% HW:%*d WU:%*.2f/m",
 			displayed_hashes,
-			drwidth, reject_pct,
+			dawidth, cgpu->diff_accepted,
+			dpwidth, reject_pct,
 			hwwidth, cgpu->hw_errors,
 			wuwidth + 2, wu);
 	logline[0] = '\0';
@@ -5205,7 +5213,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 		double thread_rolling = 0.0;
 		int i;
 
-		applog(LOG_DEBUG, "[thread %d: %"PRIu64" hashes, %.1f khash/sec]",
+		applog(LOG_DEBUG, "[thread %d: %"PRIu64" hashes, %.3f khash/sec]",
 			thr_id, hashes_done, hashes_done / 1000 / secs);
 
 		/* Rolling average for each thread and each device */
@@ -5268,7 +5276,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, sizeof(displayed_rolling), 4);
 
 	snprintf(statusline, sizeof(statusline),
-		"%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  WU:%.3f/m",
+		"%s(%ds):%s (avg):%sh/s | A:%.3f  R:%.3f  HW:%d  WU:%.3f/m",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_diff_rejected, hw_errors,
@@ -7504,7 +7512,7 @@ void print_summary(void)
 		mhash_base = false;
 	}
 
-	applog(LOG_WARNING, "Average hashrate: %.1f %shash/s", displayed_hashes, mhash_base? "Mega" : "Kilo");
+	applog(LOG_WARNING, "Average hashrate: %.3f %shash/s", displayed_hashes, mhash_base? "Mega" : "Kilo");
 	applog(LOG_WARNING, "Solved blocks: %d", found_blocks);
 	applog(LOG_WARNING, "Best share difficulty: %s", best_share);
 	applog(LOG_WARNING, "Share submissions: %d", total_accepted + total_rejected);

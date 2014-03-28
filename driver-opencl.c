@@ -1270,12 +1270,12 @@ static void get_opencl_statline_before(char *buf, size_t bufsiz, struct cgpu_inf
 			tailsprintf(buf, bufsiz, "       ");
 		if (gf != -1)
 			// show invalid as 9999
-			tailsprintf(buf, bufsiz, "%4dRPM ", gf > 9999 ? 9999 : gf);
+			tailsprintf(buf, bufsiz, "%4dRPM", gf > 9999 ? 9999 : gf);
 		else if ((gp = gpu_fanpercent(gpuid)) != -1)
 			tailsprintf(buf, bufsiz, "%3d%%    ", gp);
 		else
 			tailsprintf(buf, bufsiz, "        ");
-		tailsprintf(buf, bufsiz, "| ");
+		tailsprintf(buf, bufsiz, "|");
 	} else
 		gpu->drv->get_statline_before = &blank_get_statline_before;
 }
