@@ -48,6 +48,7 @@ extern bool opt_loginput;
 extern char *opt_kernel_path;
 extern int gpur_thr_id;
 extern bool opt_noadl;
+extern bool have_opencl;
 
 extern void *miner_thread(void *userdata);
 extern int dev_from_id(int thr_id);
@@ -1157,6 +1158,9 @@ static void opencl_detect(bool hotplug)
 {
 	int i;
 
+	if (opt_nogpu || hotplug)
+		return;
+
 	nDevs = clDevicesNum();
 	if (nDevs < 0) {
 		applog(LOG_ERR, "clDevicesNum returned error, no GPUs usable");
@@ -1213,11 +1217,11 @@ static void get_opencl_statline_before(char *buf, size_t bufsiz, struct cgpu_inf
 			tailsprintf(buf, bufsiz, "       ");
 		if (gf != -1)
 			// show invalid as 9999
-			tailsprintf(buf, bufsiz, "%4dRPM ", gf > 9999 ? 9999 : gf);
+			tailsprintf(buf, bufsiz, "%4d ", gf > 9999 ? 9999 : gf);
 		else if ((gp = gpu_fanpercent(gpuid)) != -1)
-			tailsprintf(buf, bufsiz, "%3d%%    ", gp);
+			tailsprintf(buf, bufsiz, "%3d%% ", gp);
 		else
-			tailsprintf(buf, bufsiz, "        ");
+			tailsprintf(buf, bufsiz, "     ");
 		tailsprintf(buf, bufsiz, "| ");
 	} else
 		gpu->drv->get_statline_before = &blank_get_statline_before;
@@ -1296,6 +1300,8 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
 	get_datestamp(cgpu->init, sizeof(cgpu->init), &now);
+
+	have_opencl = true;
 
 	return true;
 }

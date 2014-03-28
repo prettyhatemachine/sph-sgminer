@@ -223,14 +223,14 @@ static inline void list_splice_init(struct list_head *list,
  */
 #ifndef _MSC_VER
 #define list_for_each_entry(pos, head, member) \
-	for (pos = list_entry((head)->next, typeof(*pos), member); \
-		&pos->member != (head); \
-		pos = list_entry(pos->member.next, typeof(*pos), member))
-#else
-#define list_for_each_entry(pos, head, member) \
 	for (pos = list_entry((head)->next, typeof(pos), member); \
 		&pos->member != (head); \
 		pos = list_entry(pos->member.next, typeof(pos), member))
+#else
+#define list_for_each_entry(pos, head, member) \
+	for (pos = list_entry((head)->next, decltype(pos), member); \
+		&pos->member != (head); \
+		pos = list_entry(pos->member.next, decltype(pos), member))
 #endif
 
 /**

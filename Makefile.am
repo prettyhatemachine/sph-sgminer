@@ -3,6 +3,12 @@ ACLOCAL_AMFLAGS = -I m4
 
 JANSSON_CPPFLAGS= -I$(top_builddir)/compat/jansson-2.5/src -I$(top_srcdir)/compat/jansson-2.5/src
 
+if WANT_USBUTILS
+USBUTILS_INCLUDES = -I$(top_builddir)/compat/libusb-1.0/libusb -I$(top_srcdir)/compat/libusb-1.0/libusb
+else
+USBUTILS_INCLUDES =
+endif
+
 EXTRA_DIST	= example.conf m4/gnulib-cache.m4 \
 		  ADL_SDK/readme.txt api-example.php miner.php	\
 		  API.class API.java api-example.c hexdump.c \
@@ -12,10 +18,11 @@ SUBDIRS		= lib compat ccan
 
 bin_PROGRAMS     = sgminer
 
-sgminer_CPPFLAGS = $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_CPPFLAGS)
+sgminer_CPPFLAGS = $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_CPPFLAGS) $(USBUTILS_INCLUDES)
 sgminer_LDFLAGS  = $(PTHREAD_FLAGS)
 sgminer_LDADD    = $(DLOPEN_FLAGS) @LIBCURL_LIBS@ @JANSSON_LIBS@ @PTHREAD_LIBS@ \
 		  @OPENCL_LIBS@ @NCURSES_LIBS@ @PDCURSES_LIBS@ @WS2_LIBS@ \
+		  @LIBUSB_LIBS@ \
 		  @MM_LIBS@ @RT_LIBS@ @MATH_LIBS@ lib/libgnu.a ccan/libccan.a
 
 sgminer_CPPFLAGS += -I$(top_builddir)/lib -I$(top_srcdir)/lib @OPENCL_FLAGS@
@@ -45,6 +52,14 @@ sgminer_SOURCES += pool.c pool.h
 sgminer_SOURCES += algorithm.c algorithm.h
 sgminer_SOURCES += scrypt.c scrypt.h
 sgminer_SOURCES += kernel/*.cl
+
+if WANT_USBUTILS
+sgminer_SOURCES += usbutils.c usbutils.h
+endif
+
+if HAS_GRIDSEED
+sgminer_SOURCES += driver-gridseed.c driver-gridseed.h
+endif
 
 bin_SCRIPTS	= $(top_srcdir)/kernel/*.cl
 
