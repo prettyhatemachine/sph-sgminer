@@ -57,17 +57,20 @@ client if you want to customise the display.
 
 ## Can I mine on servers from different networks...
 
-...(e.g. litecoin and dogecoin) at the same time?
+...(e.g. Litecoin and Dogecoin) at the same time?
 
 No. `sgminer` keeps a database of the block it's working on to ensure
 it does not work on stale blocks, and having different blocks from two
 networks would make it invalidate the work from each other.
 
+A workaround is running separate instances (see next question).
 
-## Can I mine with different login credentials or pools for each separate device?
+## Can I mine with different login credentials or pools for each separate
+device?
 
-No. Run separate instances with `-d`.
-
+No. Run per-device instances with command-line argument `-d`, or specify
+`device` in the configuration file. Use per-instance configuration files
+if needed (specified with `--config` on the command line).
 
 ## Can I put multiple pools in the config file?
 
@@ -78,7 +81,7 @@ either on the command line or via the menu after startup and choose
 
 ## The build fails with `gcc is unable to build a binary`.
 
-Remove the "-march=native" component of your `CFLAGS` as your version
+Remove the `-march=native` component of your `CFLAGS` as your version
 of gcc does not support it.
 
 

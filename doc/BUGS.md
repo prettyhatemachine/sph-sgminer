@@ -19,7 +19,7 @@ Information that may be relevant, depending on the nature of your issue:
 * GPUs used (`sgminer --ndevs`);
 * whether you're using a pre-compiled binary or built from source;
 * `sgminer` version (`sgminer --version` and/or `git describe`);
-* contents of the configuration file;
+* contents of the configuration file and pool connection info;
 * launch procedure (manual or via script);
 * steps to repeat;
 * expected result;
