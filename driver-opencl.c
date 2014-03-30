@@ -1136,6 +1136,8 @@ select_cgpu:
 		cgtime(&thr->sick);
 		if (!pthread_cancel(thr->pth)) {
 			applog(LOG_WARNING, "Thread %d still exists, killing it off", thr_id);
+			pthread_join(thr->pth, NULL);
+			thr->cgpu->drv->thread_shutdown(thr);
 		} else
 			applog(LOG_WARNING, "Thread %d no longer exists", thr_id);
 	}
@@ -1162,7 +1164,7 @@ select_cgpu:
 		//free(clState);
 
 		applog(LOG_INFO, "Reinit GPU thread %d", thr_id);
-		clStates[thr_id] = initCl(virtual_gpu, name, sizeof(name));
+		clStates[thr_id] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm);
 		if (!clStates[thr_id]) {
 			applog(LOG_ERR, "Failed to reinit GPU thread %d", thr_id);
 			goto select_cgpu;
@@ -1228,6 +1230,7 @@ static void opencl_detect(bool hotplug)
 			cgpu->threads = 1;
 #endif
 		cgpu->virtual_gpu = i;
+		cgpu->algorithm = *default_algorithm;
 		add_cgpu(cgpu);
 	}
 
@@ -1303,7 +1306,7 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 
 	strcpy(name, "");
 	applog(LOG_INFO, "Init GPU thread %i GPU %i virtual GPU %i", i, gpu, virtual_gpu);
-	clStates[i] = initCl(virtual_gpu, name, sizeof(name));
+	clStates[i] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm);
 	if (!clStates[i]) {
 #ifdef HAVE_CURSES
 		if (use_curses)
@@ -1512,15 +1515,25 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	return hashes;
 }
 
+// Cleanup OpenCL memory on the GPU
+// Note: This function is not thread-safe (clStates modification not atomic)
 static void opencl_thread_shutdown(struct thr_info *thr)
 {
 	const int thr_id = thr->id;
 	_clState *clState = clStates[thr_id];
+	clStates[thr_id] = NULL;
 
-	clReleaseKernel(clState->kernel);
-	clReleaseProgram(clState->program);
-	clReleaseCommandQueue(clState->commandQueue);
-	clReleaseContext(clState->context);
+	if (clState) {
+		clFinish(clState->commandQueue);
+		clReleaseMemObject(clState->outputBuffer);
+		clReleaseMemObject(clState->CLbuffer0);
+		clReleaseMemObject(clState->padbuffer8);
+		clReleaseKernel(clState->kernel);
+		clReleaseProgram(clState->program);
+		clReleaseCommandQueue(clState->commandQueue);
+		clReleaseContext(clState->context);
+		free(clState);
+	}
 }
 
 struct device_drv opencl_drv = {

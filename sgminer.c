@@ -123,8 +123,7 @@ int opt_queue = 1;
 int opt_scantime = 7;
 int opt_expiry = 28;
 
-char *opt_algorithm;
-algorithm_t *algorithm;
+algorithm_t *default_algorithm;
  
 static const bool opt_time = true;
 unsigned long long global_hashrate;
@@ -223,6 +222,11 @@ pthread_rwlock_t devices_lock;
 
 static pthread_mutex_t lp_lock;
 static pthread_cond_t lp_cond;
+
+static pthread_mutex_t algo_switch_lock;
+static int algo_switch_n = 0;
+static pthread_mutex_t algo_switch_wait_lock;
+static pthread_cond_t algo_switch_wait_cond;
 
 pthread_mutex_t restart_lock;
 pthread_cond_t restart_cond;
@@ -566,6 +570,9 @@ struct pool *add_pool(void)
 	buf[0] = '\0';
 	pool->name = strdup(buf);
 
+	/* Algorithm */
+	pool->algorithm = *default_algorithm;
+
 	pools = (struct pool **)realloc(pools, sizeof(struct pool *) * (total_pools + 2));
 	pools[total_pools++] = pool;
 	mutex_init(&pool->pool_lock);
@@ -796,6 +803,34 @@ static char *set_url(char *arg)
 	struct pool *pool = add_url();
 
 	setup_url(pool, arg);
+	return NULL;
+}
+
+static char *set_pool_algorithm(char *arg)
+{
+	struct pool *pool;
+
+	while ((json_array_index + 1) > total_pools)
+		add_pool();
+	pool = pools[json_array_index];
+
+	applog(LOG_DEBUG, "Setting pool %i algorithm to %s", pool->pool_no, arg);
+	set_algorithm(&pool->algorithm, arg);
+
+	return NULL;
+}
+
+static char *set_pool_nfactor(char *arg)
+{
+	struct pool *pool;
+
+	while ((json_array_index + 1) > total_pools)
+		add_pool();
+	pool = pools[json_array_index];
+
+	applog(LOG_DEBUG, "Setting pool %i N-factor to %s", pool->pool_no, arg);
+	set_algorithm_nfactor(&pool->algorithm, (const uint8_t) atoi(arg));
+
 	return NULL;
 }
 
@@ -1060,17 +1095,17 @@ static void load_temp_cutoffs()
 
 static char *set_algo(const char *arg)
 {
-	set_algorithm(algorithm, arg);
-	applog(LOG_INFO, "Set algorithm to %s", algorithm->name);
+	set_algorithm(default_algorithm, arg);
+	applog(LOG_INFO, "Set default algorithm to %s", default_algorithm->name);
 
 	return NULL;
 }
 
 static char *set_nfactor(const char *arg)
 {
-	set_algorithm_nfactor(algorithm, (uint8_t)atoi(arg));
+	set_algorithm_nfactor(default_algorithm, (const uint8_t) atoi(arg));
 	applog(LOG_INFO, "Set algorithm N-factor to %d (N to %d)",
-	       algorithm->nfactor, algorithm->n);
+	       default_algorithm->nfactor, default_algorithm->n);
 
 	return NULL;
 }
@@ -1428,6 +1463,12 @@ OPT_WITH_ARG("--poolname", /* Backward compatibility, to be removed. */
 	OPT_WITH_ARG("--url|-o",
 		     set_url, NULL, NULL,
 		     "URL for bitcoin JSON-RPC server"),
+	OPT_WITH_ARG("--pool-algorithm",
+			set_pool_algorithm, NULL, NULL,
+			"Set algorithm for pool"),
+	OPT_WITH_ARG("--pool-nfactor",
+			set_pool_nfactor, NULL, NULL,
+			"Set N-factor for pool"),
 	OPT_WITH_ARG("--user|-u",
 		     set_user, NULL, NULL,
 		     "Username for bitcoin JSON-RPC server"),
@@ -6189,6 +6230,54 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cgtime(&work->tv_staged);
 }
 
+static void get_work_prepare_thread(struct thr_info *mythr, struct work *work)
+{
+	int i;
+	bool cond;
+
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	mutex_lock(&algo_switch_lock);
+
+	if (cmp_algorithm(&work->pool->algorithm, &mythr->cgpu->algorithm) && (algo_switch_n == 0)) {
+		mutex_unlock(&algo_switch_lock);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+		return;
+	}
+
+	algo_switch_n++;
+
+	// If all threads are waiting now
+	if (algo_switch_n >= mining_threads) {
+		rd_lock(&mining_thr_lock);
+		// Shutdown all threads first (necessary)
+		for (i = 0; i < mining_threads; i++) {
+			struct thr_info *thr = mining_thr[i];
+		  thr->cgpu->drv->thread_shutdown(thr);
+		}
+		// Change algorithm for each thread (thread_prepare calls initCl)
+		for (i = 0; i < mining_threads; i++) {
+			struct thr_info *thr = mining_thr[i];
+			thr->cgpu->algorithm = work->pool->algorithm;
+		  thr->cgpu->drv->thread_prepare(thr);
+		}
+		rd_unlock(&mining_thr_lock);
+	  algo_switch_n = 0;
+		mutex_unlock(&algo_switch_lock);
+		// Signal other threads to start working now
+		mutex_lock(&algo_switch_wait_lock);
+		pthread_cond_broadcast(&algo_switch_wait_cond);
+		mutex_unlock(&algo_switch_wait_lock);
+	// Not all threads are waiting, join the waiting list
+	} else {
+		mutex_unlock(&algo_switch_lock);
+		// Wait for signal to start working again
+		mutex_lock(&algo_switch_wait_lock);
+		pthread_cond_wait(&algo_switch_wait_cond, &algo_switch_wait_lock);
+		mutex_unlock(&algo_switch_wait_lock);
+	}
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+}
+
 struct work *get_work(struct thr_info *thr, const int thr_id)
 {
 	struct work *work = NULL;
@@ -6205,6 +6294,9 @@ struct work *get_work(struct thr_info *thr, const int thr_id)
 			wake_gws();
 		}
 	}
+
+	get_work_prepare_thread(thr, work);
+
 	diff_t = time(NULL) - diff_t;
 	/* Since this is a blocking function, we need to add grace time to
 	 * the device's last valid work to not make outages appear to be
@@ -6304,7 +6396,7 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 	else if (strcmp(gpus[0].kernelname, DARKCOIN_KERNNAME) == 0)
 		darkcoin_regenhash(work);
 	else
-		scrypt_regenhash(work);
+		scrypt_regenhash(work, work->pool->algorithm.n);
 }
 
 /* For testing a nonce against diff 1 */
@@ -6439,8 +6531,10 @@ static void mt_disable(struct thr_info *mythr, const int thr_id,
 	applog(LOG_WARNING, "Thread %d being disabled", thr_id);
 	mythr->rolling = mythr->cgpu->rolling = 0;
 	applog(LOG_DEBUG, "Waiting on sem in miner thread");
+	mythr->paused = true;
 	cgsem_wait(&mythr->sem);
 	applog(LOG_WARNING, "Thread %d being re-enabled", thr_id);
+	mythr->paused = false;
 	drv->thread_enable(mythr);
 }
 
@@ -6457,7 +6551,7 @@ static void hash_sole_work(struct thr_info *mythr)
 	struct sgminer_stats *pool_stats;
 	/* Try to cycle approximately 5 times before each log update */
 	const long cycle = opt_log_interval / 5 ? 5 : 1;
-	const bool primary = (!mythr->device_thread) || mythr->primary_thread;
+	const bool primary = mythr->device_thread == 0;
 	struct timeval diff, sdiff, wdiff = {0, 0};
 	uint32_t max_nonce = drv->can_limit_work(mythr);
 	int64_t hashes_done = 0;
@@ -8070,6 +8164,7 @@ int main(int argc, char *argv[])
 	rwlock_init(&netacc_lock);
 	rwlock_init(&mining_thr_lock);
 	rwlock_init(&devices_lock);
+	mutex_init(&algo_switch_lock);
 
 	mutex_init(&lp_lock);
 	if (unlikely(pthread_cond_init(&lp_cond, NULL)))
@@ -8078,6 +8173,10 @@ int main(int argc, char *argv[])
 	mutex_init(&restart_lock);
 	if (unlikely(pthread_cond_init(&restart_cond, NULL)))
 		quit(1, "Failed to pthread_cond_init restart_cond");
+
+	mutex_init(&algo_switch_wait_lock);
+	if (unlikely(pthread_cond_init(&algo_switch_wait_cond, NULL)))
+		quit(1, "Failed to pthread_cond_init algo_switch_wait_cond");
 
 	if (unlikely(pthread_cond_init(&gws_cond, NULL)))
 		quit(1, "Failed to pthread_cond_init gws_cond");
@@ -8122,8 +8221,8 @@ int main(int argc, char *argv[])
 #endif
 
 	/* Default algorithm specified in algorithm.c ATM */
-	algorithm = (algorithm_t *)alloca(sizeof(algorithm_t));
-	set_algorithm(algorithm, "scrypt");
+	default_algorithm = (algorithm_t *)alloca(sizeof(algorithm_t));
+	set_algorithm(default_algorithm, "scrypt");
 	
 	devcursor = 8;
   	logstart = devcursor + 1;
