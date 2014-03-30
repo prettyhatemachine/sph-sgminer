@@ -3597,19 +3597,8 @@ static uint64_t share_diff(const struct work *work)
 	return ret;
 }
 
-static void rebuild_hash(struct work *work)
-{
-	if (opt_scrypt_jane) {
-		/* scrypt-jane */
-		sj_scrypt_regenhash(work);
-	} else {
-		/* standard scrypt */
-		scrypt_regenhash(work);
-	}
-}
-
-
 static bool cnx_needed(struct pool *pool);
+
 /* Find the pool that currently has the highest priority */
 static struct pool *priority_pool(int choice)
 {
@@ -5996,11 +5985,11 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 
 	if (opt_scrypt_jane) {
 		*work_nonce = htobe32(nonce);
+		sj_scrypt_regenhash(work);
 	} else {
 		*work_nonce = htole32(nonce);
+		scrypt_regenhash(work);
 	}
-
-	rebuild_hash(work);
 }
 
 /* For testing a nonce against diff 1 */
