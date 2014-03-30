@@ -4655,8 +4655,6 @@ void write_config(FILE *fcfg)
 	}
 	if (opt_removedisabled)
 		fprintf(fcfg, ",\n\"remove-disabled\" : true");
-	if (strcmp(algorithm->name, "scrypt") != 0)
-		fprintf(fcfg, ",\n\"algorithm\" : \"%s\"", json_escape(algorithm->name));
 	if (opt_api_allow)
 		fprintf(fcfg, ",\n\"api-allow\" : \"%s\"", json_escape(opt_api_allow));
 	if (strcmp(opt_api_mcast_addr, API_MCAST_ADDR) != 0)
