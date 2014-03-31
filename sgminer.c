@@ -6393,6 +6393,8 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 		groestlcoin_regenhash(work);
 	else if (strcmp(gpus[0].kernelname, DARKCOIN_KERNNAME) == 0)
 		darkcoin_regenhash(work);
+	else if (strcmp(gpus[0].kernelname, SIFCOIN_KERNNAME) == 0)
+		sifcoin_regenhash(work);
 	else
 		scrypt_regenhash(work, work->pool->algorithm.n);
 }
