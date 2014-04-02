@@ -24,12 +24,12 @@
  * SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "miner.h"
+#include "sifcoin.h"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"

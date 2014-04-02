@@ -4655,6 +4655,8 @@ void write_config(FILE *fcfg)
 	}
 	if (opt_removedisabled)
 		fprintf(fcfg, ",\n\"remove-disabled\" : true");
+	if (strcmp(default_algorithm->name, "scrypt") != 0)
+		fprintf(fcfg, ",\n\"algorithm\" : \"%s\"", json_escape(default_algorithm->name));
 	if (opt_api_allow)
 		fprintf(fcfg, ",\n\"api-allow\" : \"%s\"", json_escape(opt_api_allow));
 	if (strcmp(opt_api_mcast_addr, API_MCAST_ADDR) != 0)
@@ -6231,7 +6233,6 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 static void get_work_prepare_thread(struct thr_info *mythr, struct work *work)
 {
 	int i;
-	bool cond;
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	mutex_lock(&algo_switch_lock);
