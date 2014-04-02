@@ -1385,6 +1385,8 @@ static bool opencl_thread_init(struct thr_info *thr)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else if (strcmp(gpu->kernelname, GROESTLCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
+	else if (strcmp(gpu->kernelname, SIFCOIN_KERNNAME) == 0)
+		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else
 		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");
 

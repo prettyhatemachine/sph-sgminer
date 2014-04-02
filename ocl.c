@@ -470,6 +470,10 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 		applog(LOG_WARNING, "Kernel groestlcoin is experimental.");
 		strcpy(filename, GROESTLCOIN_KERNNAME".cl");
 		strcpy(binaryfilename, GROESTLCOIN_KERNNAME);
+	} else if (strcmp(cgpu->kernelname, SIFCOIN_KERNNAME) == 0){
+		applog(LOG_WARNING, "Kernel groestlcoin is experimental.");
+		strcpy(filename, SIFCOIN_KERNNAME".cl");
+		strcpy(binaryfilename, SIFCOIN_KERNNAME);
 	} else {
 		applog(LOG_WARNING, "Kernel was not chosen.");
 	}
