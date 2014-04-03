@@ -1016,7 +1016,7 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 
 	le_target = *(cl_uint *)(blk->work->device_target + 28);
 
-	if (opt_scrypt_jane) {
+	if (algorithm->algo == ALGO_SCRYPT_JANE) {
 		unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
 		nfactor = sj_GetNfactor(timestamp);
 		nfactor = (1 << (nfactor + 1));
@@ -1034,7 +1034,7 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	CL_SET_VARG(4, &midstate[0]);
 	CL_SET_VARG(4, &midstate[16]);
 	CL_SET_ARG(le_target);
-	if (opt_scrypt_jane)
+	if (algorithm->algo == ALGO_SCRYPT_JANE)
 		CL_SET_ARG(nfactor);
 
 	return status;
@@ -1311,8 +1311,6 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 	}
 	if (!cgpu->name)
 		cgpu->name = strdup(name);
-	if (!cgpu->kernelname)
-		cgpu->kernelname = opt_scrypt_jane ? strdup("scrypt-jane") : strdup("ckolivas");
 
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
@@ -1388,8 +1386,6 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	int64_t hashes;
 	int found = FOUND;
 	int buffersize = BUFFERSIZE;
-	uint32_t *o;
-	uint32_t target;
 
 	/* Windows' timer resolution is only 15ms so oversample 5x */
 	if (gpu->dynamic && (++gpu->intervals * dynamic_us) > 70000) {
@@ -1424,7 +1420,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		size_t global_work_offset[1];
 
 		global_work_offset[0] = work->blk.nonce;
-		if (opt_scrypt_jane)
+		if (algorithm->algo == ALGO_SCRYPT_JANE)
 			applog(LOG_DEBUG, "Nonce: %x, Global work size: %x, local work size: %x", work->blk.nonce, (unsigned)globalThreads[0], (unsigned)localThreads[0]);
 
 		status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, global_work_offset,
@@ -1444,7 +1440,9 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		return -1;
 	}
 
-	if (opt_scrypt_jane) {
+	if (algorithm->algo == ALGO_SCRYPT_JANE) {
+		uint32_t *o;
+		uint32_t target;
 		o = thrdata->res;
 		target = *(uint32_t *)(work->target + 28);
 		applog(LOG_DEBUG, "Nonce: %x, Output buffer: %x %x %x %x %x %x %x %x Target: %x", work->blk.nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], target);

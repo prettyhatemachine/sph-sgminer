@@ -119,7 +119,6 @@ time_t last_getwork;
 unsigned int sj_minNf = 4;
 unsigned int sj_maxNf = 30;
 unsigned int sj_startTime = 1388361600;
-bool opt_scrypt_jane;
 
 int nDevs;
 int opt_dynamic_interval = 7;
@@ -1082,7 +1081,7 @@ static void load_temp_cutoffs()
 
 static char *set_algo(const char *arg)
 {
-	set_algorithm(algorithm, arg);
+	set_algorithm(&algorithm, arg);
 	applog(LOG_INFO, "Set algorithm to %s", algorithm->name);
 
 	return NULL;
@@ -1437,9 +1436,6 @@ static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--sched-stop",
 		     set_schedtime, NULL, &schedstop,
 		     "Set a time of day in HH:MM to stop mining (will quit without a start time)"),
-	OPT_WITHOUT_ARG("--scrypt-jane",
-			opt_set_bool, &opt_scrypt_jane,
-			"Use the scrypt-jane algorithm for mining"),
 	OPT_WITH_ARG("--sj-nfmin",
 			set_int_0_to_40, opt_show_intval, &sj_minNf,
 			"Set min N factor for mining scrypt-jane"),
@@ -3182,7 +3178,7 @@ static void calc_diff(struct work *work, double known)
 	else {
 		double d64, dcut64;
 
-		d64 = (double)65536 * truediffone;
+		d64 = algorithm->diff_multiplier2 * truediffone;
 
 		dcut64 = le256todouble(work->target);
 		if (unlikely(!dcut64))
@@ -3823,7 +3819,7 @@ static uint64_t share_diff(const struct work *work)
 	double d64, s64;
 	uint64_t ret;
 
-	d64 = (double)65536 * truediffone;
+	d64 = algorithm->diff_multiplier2 * truediffone;
 	s64 = le256todouble(work->hash);
 	if (unlikely(!s64))
 		s64 = 0;
@@ -4154,7 +4150,7 @@ static void set_blockdiff(const struct work *work)
 	uint8_t pow = work->data[72];
 	int powdiff = (8 * (0x1d - 3)) - (8 * (pow - 3));
 	uint32_t diff32 = be32toh(*((uint32_t *)(work->data + 72))) & 0x00FFFFFF;
-	double numerator = 0xFFFFFFFFULL << powdiff;
+	double numerator = algorithm->diff_numerator << powdiff;
 	double ddiff = numerator / (double)diff32;
 
 	if (unlikely(current_diff != ddiff)) {
@@ -6073,7 +6069,7 @@ void set_target(unsigned char *dest_target, double diff)
 	}
 
 	// FIXME: is target set right?
-	d64 = (double)65536 * truediffone;
+	d64 = algorithm->diff_multiplier2 * truediffone;
 	d64 /= diff;
 
 	dcut64 = d64 / bits192;
@@ -6286,12 +6282,12 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 {
 	uint32_t *work_nonce = (uint32_t *)(work->data + 64 + 12);
 
-	if (opt_scrypt_jane) {
+	if (algorithm->algo == ALGO_SCRYPT_JANE) {
 		*work_nonce = htobe32(nonce);
-		sj_scrypt_regenhash(work);
+		algorithm->regenhash(work);
 	} else {
 		*work_nonce = htole32(nonce);
-		scrypt_regenhash(work);
+		algorithm->regenhash(work);
 	}
 }
 
@@ -6313,7 +6309,7 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 	uint64_t *hash64 = (uint64_t *)(work->hash + 24), diff64;
 
 	rebuild_nonce(work, nonce);
-	diff64 = 0x0000ffff00000000ULL;
+	diff64 = algorithm->diff_nonce;
 	diff64 /= diff;
 
 	return (le64toh(*hash64) <= diff64);
@@ -6322,11 +6318,11 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 static void update_work_stats(struct thr_info *thr, struct work *work)
 {
 	double test_diff = current_diff;
-	test_diff *= 65536;
+	test_diff *= algorithm->diff_multiplier2;
 
 	work->share_diff = share_diff(work);
 
-	test_diff *= 65536;
+	test_diff *= algorithm->diff_multiplier2;
 
 	if (unlikely(work->share_diff >= test_diff)) {
 		work->block = true;
@@ -8270,8 +8266,7 @@ int main(int argc, char *argv[])
 #endif
 
 	/* Default algorithm specified in algorithm.c ATM */
-	algorithm = (algorithm_t *)alloca(sizeof(algorithm_t));
-	set_algorithm(algorithm, "scrypt");
+	set_algorithm(&algorithm, "scrypt");
 
 	devcursor = 7;
 	logstart = devcursor + 1;

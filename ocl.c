@@ -411,13 +411,8 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	char strbuf[32];
 
 	if (cgpu->kernelname == NULL) {
-		if (opt_scrypt_jane) {
-			applog(LOG_INFO, "No kernel specified, defaulting to scrypt-jane");
-			cgpu->kernelname = strdup("scrypt-jane");
-		} else {
-			applog(LOG_INFO, "No kernel specified, defaulting to ckolivas");
-			cgpu->kernelname = strdup("ckolivas");
-		}
+		applog(LOG_INFO, "No kernel specified, defaulting to %s", algorithm->kernelname);
+		cgpu->kernelname = algorithm->kernelname;
 	}
 
 	sprintf(strbuf, "%s.cl", cgpu->kernelname);

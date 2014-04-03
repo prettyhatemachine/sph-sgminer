@@ -8,23 +8,31 @@
  */
 
 #include "algorithm.h"
+#include "scrypt.h"
+#include "scrypt-jane.h"
 
 #include <inttypes.h>
 #include <string.h>
 
-void set_algorithm(algorithm_t* algo, const char* newname) {
-    strncpy(algo->name, newname, sizeof(algo->name));
-    algo->name[sizeof(algo->name) - 1] = '\0';
+static algorithm_t algos[] = {
+    // kernels starting from this will have difficulty calculated by using litecoin algorithm
+    { "scrypt",             "ckolivas", 10, 0, ALGO_SCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
+    { "nscrypt",            "ckolivas", 11, 0, ALGO_NSCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
+    { "adaptive-nscrypt",   "ckolivas", 11, 0, ALGO_NSCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
+    { "adaptive-n-scrypt",  "ckolivas", 11, 0, ALGO_NSCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
+    { "scrypt-jane",        "scrypt-jane", 10, 0, ALGO_SCRYPT_JANE, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, sj_scrypt_regenhash},
+    { NULL, NULL, 0, 0, ALGO_SCRYPT, 0, 0, 0, 0, NULL}
+};
 
-    if ((strcmp(algo->name, "adaptive-n-factor") == 0) ||
-	(strcmp(algo->name, "adaptive-nfactor")  == 0) ||
-	(strcmp(algo->name, "nscrypt")           == 0) ) {
-	set_algorithm_nfactor(algo, 11);
-    } else {
-	set_algorithm_nfactor(algo, 10);
+void set_algorithm(algorithm_t** algo, const char* newname) {
+    algorithm_t* a;
+    for (a = algos; a->name; a++) {
+	if (strcmp(a->name, newname) == 0) {
+		*algo = a;
+		break;
+	}
     }
-
-    return;
+    (*algo)->n = (1 << (*algo)->nfactor);
 }
 
 void set_algorithm_nfactor(algorithm_t* algo, const uint8_t nfactor) {
