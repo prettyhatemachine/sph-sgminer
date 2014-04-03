@@ -9,6 +9,15 @@ enum algorithm {
     ALGO_SCRYPT, // kernels starting from this will have difficulty calculated by using litecoin algorithm
     ALGO_NSCRYPT,
     ALGO_SCRYPT_JANE,
+    ALGO_QUARKCOIN, // kernels starting from this will have difficulty calculated by using quarkcoin algorithm
+    ALGO_QUBITCOIN,
+    ALGO_INKCOIN,
+    ALGO_ANIMECOIN,
+    ALGO_SIFCOIN,
+    ALGO_DARKCOIN, // kernels starting from this will have difficulty calculated by using bitcoin algorithm
+    ALGO_MYRIADCOIN_GROESTL,
+    ALGO_FUGUECOIN,
+    ALGO_GROESTLCOIN,
 };
 
 /* Describes the Scrypt parameters and hashing functions used to mine

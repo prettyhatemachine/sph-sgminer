@@ -63,6 +63,7 @@ char *curly = ":D";
 #include "algorithm.h"
 #include "scrypt.h"
 #include "scrypt-jane.h"
+#include "darkcoin.h"
 #ifdef USE_USBUTILS
 #include "usbutils.h"
 #endif
@@ -251,7 +252,8 @@ cglock_t control_lock;
 pthread_mutex_t stats_lock;
 
 int hw_errors;
-int total_accepted, total_rejected, total_diff1;
+int total_accepted, total_rejected;
+double total_diff1;
 int total_getworks, total_stale, total_discarded;
 double total_diff_accepted, total_diff_rejected, total_diff_stale;
 static int staged_rollable;
@@ -295,7 +297,7 @@ struct timeval block_timeval;
 static char best_share[8] = "0";
 double current_diff = 0xFFFFFFFFFFFFFFFFULL;
 static char block_diff[8];
-uint64_t best_diff = 0;
+double best_diff = 0;
 
 struct block {
 	char hash[68];
@@ -2275,6 +2277,18 @@ static void suffix_string(uint64_t val, char *buf, size_t bufsiz, int sigdigits)
 	}
 }
 
+/* Convert a double value into a truncated string for displaying with its
+ * associated suitable for Mega, Giga etc. Buf array needs to be long enough */
+static void suffix_string_double(double val, char *buf, size_t bufsiz, int sigdigits)
+{
+	if (val < 10) {
+		snprintf(buf, bufsiz, "%.3lf", val);
+	} else {
+		return suffix_string(val, buf, bufsiz, sigdigits);
+	}
+}
+
+
 double cgpu_runtime(struct cgpu_info *cgpu)
 {
 	struct timeval now;
@@ -2309,7 +2323,7 @@ static void get_statline(char *buf, size_t bufsiz, struct cgpu_info *cgpu)
 
 	snprintf(buf, bufsiz, "%s%d ", cgpu->drv->name, cgpu->device_id);
 	cgpu->drv->get_statline_before(buf, bufsiz, cgpu);
-	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d WU:%.1f/m",
+	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d WU:%.3f/m",
 		opt_log_interval,
 		displayed_rolling,
 		displayed_hashes,
@@ -2464,7 +2478,7 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(wu, &wuwidth);
 
-	cg_wprintw(statuswin, "/%6s | A:%*.0f R:%*.0f (%*.1f%%) HW:%*d WU:%*.1f/m",
+	cg_wprintw(statuswin, "/%6s | A:%*.0f R:%*.0f (%*.1f%%) HW:%*d WU:%*.3f/m",
 			displayed_hashes,
 			dawidth, cgpu->diff_accepted,
 			drwidth, cgpu->diff_rejected,
@@ -2754,10 +2768,10 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 static void show_hash(struct work *work, char *hashshow)
 {
 	unsigned char rhash[32];
-	char diffdisp[16];
+	char diffdisp[16], wdiffdisp[16];
 	unsigned long h32;
 	uint32_t *hash32;
-	int intdiff, ofs;
+	int ofs;
 
 	swab256(rhash, work->hash);
 	for (ofs = 0; ofs <= 28; ofs ++) {
@@ -2766,9 +2780,9 @@ static void show_hash(struct work *work, char *hashshow)
 	}
 	hash32 = (uint32_t *)(rhash + ofs);
 	h32 = be32toh(*hash32);
-	intdiff = round(work->work_difficulty);
-	suffix_string(work->share_diff, diffdisp, sizeof (diffdisp), 0);
-	snprintf(hashshow, 64, "%08lx Diff %s/%d%s", h32, diffdisp, intdiff,
+	suffix_string_double(work->share_diff, diffdisp, sizeof (diffdisp), 0);
+	suffix_string_double(work->work_difficulty, wdiffdisp, sizeof (wdiffdisp), 0);
+	snprintf(hashshow, 64, "%08lx Diff %s/%s%s", h32, diffdisp, wdiffdisp,
 		 work->block ? " BLOCK!" : "");
 }
 
@@ -3188,8 +3202,7 @@ static void calc_diff(struct work *work, double known)
 	difficulty = work->work_difficulty;
 
 	pool_stats->last_diff = difficulty;
-	uintdiff = round(difficulty);
-	suffix_string(uintdiff, work->pool->diff, sizeof(work->pool->diff), 0);
+	suffix_string_double(difficulty, work->pool->diff, sizeof(work->pool->diff), 0);
 
 	if (difficulty == pool_stats->min_diff)
 		pool_stats->min_diff_count++;
@@ -3813,25 +3826,25 @@ static bool stale_work(struct work *work, bool share)
 	return false;
 }
 
-static uint64_t share_diff(const struct work *work)
+static double share_diff(const struct work *work)
 {
 	bool new_best = false;
 	double d64, s64;
-	uint64_t ret;
+	double ret;
 
 	d64 = algorithm->diff_multiplier2 * truediffone;
 	s64 = le256todouble(work->hash);
 	if (unlikely(!s64))
 		s64 = 0;
 
-	ret = round(d64 / s64);
-	applog(LOG_DEBUG, "Found share with difficulty %lu", ret);
+	ret = d64 / s64;
+	applog(LOG_DEBUG, "Found share with difficulty %f", ret);
 
 	cg_wlock(&control_lock);
 	if (unlikely(ret > best_diff)) {
 		new_best = true;
 		best_diff = ret;
-		suffix_string(best_diff, best_share, sizeof(best_share), 0);
+		suffix_string_double(best_diff, best_share, sizeof(best_share), 0);
 	}
 	if (unlikely(ret > work->pool->best_diff))
 		work->pool->best_diff = ret;
@@ -4621,7 +4634,7 @@ void zero_bestshare(void)
 
 	best_diff = 0;
 	memset(best_share, 0, 8);
-	suffix_string(best_diff, best_share, sizeof(best_share), 0);
+	suffix_string_double(best_diff, best_share, sizeof(best_share), 0);
 
 	for (i = 0; i < total_pools; i++) {
 		struct pool *pool = pools[i];
@@ -5275,7 +5288,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, sizeof(displayed_rolling), 4);
 
 	snprintf(statusline, sizeof(statusline),
-		"%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  WU:%.1f/m",
+		"%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  WU:%.3f/m",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_diff_rejected, hw_errors,

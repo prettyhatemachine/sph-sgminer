@@ -522,7 +522,7 @@ struct cgpu_info {
 	int gpu_powertune;
 	float gpu_vddc;
 #endif
-	int diff1;
+	double diff1;
 	double diff_accepted;
 	double diff_rejected;
 	int last_share_pool;
@@ -1141,7 +1141,8 @@ extern double total_rolling;
 extern double total_mhashes_done;
 extern unsigned int new_blocks;
 extern unsigned int found_blocks;
-extern int total_accepted, total_rejected, total_diff1;;
+extern int total_accepted, total_rejected;
+extern double total_diff1;
 extern int total_getworks, total_stale, total_discarded;
 extern double total_diff_accepted, total_diff_rejected, total_diff_stale;
 extern unsigned int local_work;
@@ -1151,7 +1152,7 @@ extern int opt_log_interval;
 extern unsigned long long global_hashrate;
 extern char current_hash[68];
 extern double current_diff;
-extern uint64_t best_diff;
+extern double best_diff;
 extern struct timeval block_timeval;
 extern char *workpadding;
 
@@ -1223,7 +1224,7 @@ struct pool {
 	int seq_rejects;
 	int seq_getfails;
 	int solved;
-	int diff1;
+	double diff1;
 	char diff[8];
 	int quota;
 	int quota_gcd;
@@ -1280,7 +1281,7 @@ struct pool {
 
 	time_t last_share_time;
 	double last_share_diff;
-	uint64_t best_diff;
+	double best_diff;
 
 	struct sgminer_stats sgminer_stats;
 	struct sgminer_pool_stats sgminer_pool_stats;
@@ -1356,7 +1357,7 @@ struct work {
 
 	unsigned char	device_target[32];
 	double		device_diff;
-	uint64_t	share_diff;
+	double		share_diff;
 
 	int		rolls;
 	int		drv_rolllimit; /* How much the driver can roll ntime */

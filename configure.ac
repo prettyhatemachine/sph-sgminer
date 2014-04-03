@@ -410,6 +410,7 @@ AC_CONFIG_FILES([
 	compat/Makefile
 	ccan/Makefile
 	lib/Makefile
+	sph/Makefile
 	])
 AC_OUTPUT
 

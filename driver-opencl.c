@@ -1040,6 +1040,26 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	return status;
 }
 
+static cl_int queue_sph_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	unsigned char *midstate = blk->work->midstate;
+	cl_kernel *kernel = &clState->kernel;
+	unsigned int num = 0;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
+
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
+
 static void set_threads_hashes(unsigned int vectors, unsigned int compute_shaders, int64_t *hashes, size_t *globalThreads,
 			       unsigned int minthreads, __maybe_unused int *intensity, __maybe_unused int *xintensity, __maybe_unused int *rawintensity)
 {
@@ -1337,7 +1357,10 @@ static bool opencl_thread_init(struct thr_info *thr)
 		return false;
 	}
 
-	thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
+	if (ALGO_QUARKCOIN <= algorithm->algo && algorithm->algo <= ALGO_GROESTLCOIN)
+		thrdata->queue_kernel_parameters = &queue_sph_kernel;
+	else
+		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
 
 	thrdata->res = (uint32_t *)calloc(buffersize, 1);
 
