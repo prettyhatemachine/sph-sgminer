@@ -278,6 +278,13 @@ const
 #endif
 bool curses_active;
 
+#ifdef HAVE_CURSES
+#if !(defined(PDCURSES) || defined(NCURSES_VERSION))
+const
+#endif
+short default_bgcolor = COLOR_BLACK;
+#endif
+
 /* Protected by ch_lock */
 char current_hash[68];
 static char prev_block[12];
@@ -2323,6 +2330,8 @@ static bool shared_strategy(void)
 }
 
 #ifdef HAVE_CURSES
+static int menu_attr = A_REVERSE;
+static int attr_bad = A_BOLD;
 #define CURBUFSIZ 256
 #define cg_mvwprintw(win, y, x, fmt, ...) do { \
 	char tmp42[CURBUFSIZ]; \
@@ -2345,7 +2354,10 @@ static void curses_print_status(void)
 	cg_mvwprintw(statuswin, line, 0, PACKAGE " " VERSION " - Started: %s", datestamp);
 	wattroff(statuswin, A_BOLD);
 
-	mvwhline(statuswin, ++line, 0, '-', 80);
+	wattron(statuswin, menu_attr);
+	cg_mvwprintw(statuswin, ++line, 0, "[P]ool management %s[S]ettings [D]isplay options [Q]uit",
+		have_opencl ? "[G]PU management " : "");
+	wattroff(statuswin, menu_attr);
 
 	cg_mvwprintw(statuswin, ++line, 0, "%s", statusline);
 	wclrtoeol(statuswin);
@@ -2374,8 +2386,6 @@ static void curses_print_status(void)
 	mvwhline(statuswin, ++line, 0, '-', 80);
 	mvwhline(statuswin, statusy - 1, 0, '-', 80);
 
-	cg_mvwprintw(statuswin, devcursor - 1, 0, "[P]ool management %s[S]ettings [D]isplay options [Q]uit",
-		have_opencl ? "[G]PU management " : "");
 }
 
 static void adj_width(int var, int *length)
@@ -2534,11 +2544,11 @@ static void switch_logsize(bool __maybe_unused newdevs)
 			disable_curses_windows();
 #endif
 		if (opt_compact) {
-			logstart = devcursor + 1;
+			logstart = devcursor;
 		} else {
-			logstart = devcursor + most_devices + 1;
+			logstart = devcursor + most_devices;
 		}
-		logcursor = logstart + 1;
+		logcursor = logstart;
 #ifdef WIN32
 		if (newdevs)
 			enable_curses_windows();
@@ -7803,6 +7813,17 @@ void enable_curses(void) {
 	}
 
 	mainwin = initscr();
+	start_color();
+#if defined(PDCURSES) || defined(NCURSES_VERSION)
+	if (ERR != use_default_colors())
+		default_bgcolor = -1;
+#endif
+	if (has_colors() && ERR != init_pair(1, COLOR_WHITE, COLOR_BLUE))
+	{
+		menu_attr = COLOR_PAIR(1);
+		if (ERR != init_pair(2, COLOR_RED, default_bgcolor))
+			attr_bad |= COLOR_PAIR(2);
+	}
 	enable_curses_windows();
 	curses_active = true;
 	statusy = logstart;
@@ -8252,9 +8273,9 @@ int main(int argc, char *argv[])
 	algorithm = (algorithm_t *)alloca(sizeof(algorithm_t));
 	set_algorithm(algorithm, "scrypt");
 
-	devcursor = 8;
+	devcursor = 7;
 	logstart = devcursor + 1;
-	logcursor = logstart + 1;
+	logcursor = logstart;
 
 	block = (struct block *)calloc(sizeof(struct block), 1);
 	if (unlikely(!block))
