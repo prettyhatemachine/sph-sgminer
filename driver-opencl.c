@@ -1047,9 +1047,11 @@ static cl_int queue_sph_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unus
 	unsigned int num = 0;
 	cl_ulong le_target;
 	cl_int status = 0;
+	uint32_t data[20];
 
 	le_target = *(cl_ulong *)(blk->work->device_target + 24);
-	flip80(clState->cldata, blk->work->data);
+	flip80(data, blk->work->data);
+	clState->cldata = data;
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
