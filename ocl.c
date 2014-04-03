@@ -567,7 +567,8 @@ build:
 	/* create a cl program executable for all the devices specified */
 	char *CompilerOptions = (char *)calloc(1, 256);
 
-	sprintf(CompilerOptions, "-D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d -D NFACTOR=%d",
+	sprintf(CompilerOptions, "-I \"%s\" -I \"%s\" -I \"%skernel\" -I \".\" -D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d -D NFACTOR=%d",
+			opt_kernel_path, sgminer_path, sgminer_path,
 			cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize, (unsigned int)algorithm->nfactor);
 
 	applog(LOG_DEBUG, "Setting worksize to %d", (int)(clState->wsize));
