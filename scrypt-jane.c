@@ -40,31 +40,31 @@
 //const unsigned char maxNfactor = 30;
 
 unsigned char sj_GetNfactor(int nTimestamp) {
-    int l = 0;
+	int l = 0;
 
-    if (nTimestamp <= sj_startTime)
-        return sj_minNf;
+	if (nTimestamp <= sj_startTime)
+		return sj_minNf;
 
-    int s = nTimestamp - sj_startTime;
-    while ((s >> 1) > 3) {
-      l += 1;
-      s >>= 1;
-    }
+	int s = nTimestamp - sj_startTime;
+	while ((s >> 1) > 3) {
+		l += 1;
+		s >>= 1;
+	}
 
-    s &= 3;
+	s &= 3;
 
-    int n = (l * 170 + s * 25 - 2320) / 100;
+	int n = (l * 170 + s * 25 - 2320) / 100;
 
-    if (n < 0) n = 0;
+	if (n < 0) n = 0;
 
-    if (n > 255)
-        printf("sj_GetNfactor(%d) - something wrong(n == %d)\n", nTimestamp, n);
+	if (n > 255)
+		printf("sj_GetNfactor(%d) - something wrong(n == %d)\n", nTimestamp, n);
 
-    unsigned char N = (unsigned char)n;
+	unsigned char N = (unsigned char)n;
 
-    if(N<sj_minNf) return sj_minNf;
-    if(N>sj_maxNf) return sj_maxNf;
-    return N;
+	if(N<sj_minNf) return sj_minNf;
+	if(N>sj_maxNf) return sj_maxNf;
+	return N;
 }
 
 /*
@@ -90,21 +90,14 @@ void sj_scrypt_regenhash(struct work *work)
 
 	sj_be32enc_vect(data, (const uint32_t *)work->data, 19);
 	data[19] = htobe32(*nonce);
-        
-	applog(LOG_DEBUG, "timestamp %d", data[17]);
-        
-        int nfactor = sj_GetNfactor(data[17]);
-    
-        applog(LOG_DEBUG, "Dat0: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
-            data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
-    
-        sj_scrypt((unsigned char *)data, 80, 
-                       (unsigned char *)data, 80, 
-                       nfactor, 0, 0, (unsigned char *)ohash, 32);
-    
+
+	int nfactor = sj_GetNfactor(data[17]);
+
+	sj_scrypt((unsigned char *)data, 80,
+		  (unsigned char *)data, 80,
+		  nfactor, 0, 0, (unsigned char *)ohash, 32);
+
 //	flip32(ohash, ohash); // Not needed for scrypt-chacha - mikaelh
-        uint32_t *o = ohash;
-	applog(LOG_DEBUG, "Nonce: %x, Output buffe0: %x %x %x %x %x %x %x %x", *nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7]);
 }
 
 static const uint32_t sj_diff1targ = 0x0000ffff;
@@ -329,7 +322,7 @@ sj_scrypt_ChunkMix(sj_scrypt_mix_word_t *Bout/*[chunkWords]*/, sj_scrypt_mix_wor
 
 #define SJ_U32_SWAP(v) {                                             \
 	(v) = (((v) << 8) & 0xFF00FF00 ) | (((v) >> 8) & 0xFF00FF );  \
-    (v) = ((v) << 16) | ((v) >> 16);                              \
+	(v) = ((v) << 16) | ((v) >> 16);                              \
 }
 
 #define SJ_SCRYPT_WORD_ENDIAN_SWAP SJ_U32_SWAP
@@ -431,7 +424,7 @@ sj_keccak_block(sj_scrypt_hash_state *S, const uint8_t *in) {
 	/* absorb input */
 	for (i = 0; i < SJ_SCRYPT_HASH_BLOCK_SIZE / 8; i++, in += 8)
 		s[i] ^= SJ_U8TO64_LE(in);
-	
+
 	for (i = 0; i < 24; i++) {
 		/* theta: c = a[0,i] ^ a[1,i] ^ .. a[4,i] */
 		t[0] = s[0] ^ s[5] ^ s[10] ^ s[15] ^ s[20];
@@ -603,7 +596,7 @@ sj_scrypt_pbkdf2(const uint8_t *password, size_t password_len, const uint8_t *sa
 	sj_scrypt_hash_digest ti;
 	uint8_t be[4];
 	uint32_t i, blocks;
-	
+
 	/* bytes must be <= (0xffffffff - (SCRYPT_HASH_DIGEST_SIZE - 1)), which they will always be under scrypt */
 
 	/* hmac(password, ...) */
@@ -622,7 +615,7 @@ sj_scrypt_pbkdf2(const uint8_t *password, size_t password_len, const uint8_t *sa
 		sj_scrypt_hmac_finish(&work, ti);
 
 		/* T[i] = U1 ^ U2 ^ U3... */
-                
+
 		memcpy(out, ti, (bytes > SJ_SCRYPT_HASH_DIGEST_SIZE) ? SJ_SCRYPT_HASH_DIGEST_SIZE : bytes);
 		out += SJ_SCRYPT_HASH_DIGEST_SIZE;
 		bytes -= SJ_SCRYPT_HASH_DIGEST_SIZE;
@@ -654,7 +647,7 @@ sj_scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, siz
 	/* 1: X = PBKDF2(password, salt) */
 	Y = YX.ptr;
 	X = Y + chunk_bytes;
-        sj_scrypt_pbkdf2(password, password_len, salt, salt_len, X, chunk_bytes);
+	sj_scrypt_pbkdf2(password, password_len, salt, salt_len, X, chunk_bytes);
 
 	/* 2: X = ROMix(X) */
 	sj_scrypt_ROMix((sj_scrypt_mix_word_t *)X, (sj_scrypt_mix_word_t *)Y, (sj_scrypt_mix_word_t *)V.ptr, N, 1);
@@ -667,6 +660,8 @@ sj_scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, siz
 }
 
 /* Used externally as confirmation of correct OCL code */
+/* FIXME: find reference in git blame and see why it was present, remove if obsolete */
+/*
 int sj_scrypt_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce)
 {
 	uint32_t tmp_hash7, Htarg = le32toh(((const uint32_t *)ptarget)[7]);
@@ -700,4 +695,4 @@ int sj_scrypt_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t 
 		return 0;
 	return 1;
 }
-
+*/

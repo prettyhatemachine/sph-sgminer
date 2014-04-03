@@ -1012,25 +1012,19 @@ static cl_int queue_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused c
 	cl_int status = 0;
 
 	uint32_t data[20];
-	unsigned int timestamp;
 	cl_uint nfactor;
- 	
-	if (opt_scrypt_jane) {
-		timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
- 		nfactor = sj_GetNfactor(timestamp);
-		nfactor = (1 << (nfactor + 1));
-	}
 
 	le_target = *(cl_uint *)(blk->work->device_target + 28);
 
-	if (!opt_scrypt_jane) {
-		clState->cldata = blk->work->data;
-	} else {
-		/* scrypt-jane */
-		applog(LOG_DEBUG, "Timestamp: %d, Nfactor: %d, Target: %x", timestamp, nfactor, le_target);
+	if (opt_scrypt_jane) {
+		unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
+		nfactor = sj_GetNfactor(timestamp);
+		nfactor = (1 << (nfactor + 1));
 		sj_be32enc_vect(data, (const uint32_t *)blk->work->data, 19);
 		clState->cldata = data;
-	}		
+	} else {
+		clState->cldata = blk->work->data;
+	}
 
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
 
