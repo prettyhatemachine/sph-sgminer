@@ -24,42 +24,52 @@
 #include <string.h>
 
 static algorithm_t algos[] = {
-    // kernels starting from this will have difficulty calculated by using litecoin algorithm
-    { "scrypt",             "ckolivas", 10, 0, ALGO_SCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
-    { "nscrypt",            "ckolivas", 11, 0, ALGO_NSCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
-    { "adaptive-nscrypt",   "ckolivas", 11, 0, ALGO_NSCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
-    { "adaptive-n-scrypt",  "ckolivas", 11, 0, ALGO_NSCRYPT, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, scrypt_regenhash},
-    { "scrypt-jane",        "scrypt-jane", 10, 0, ALGO_SCRYPT_JANE, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, sj_scrypt_regenhash},
+	// kernels starting from this will have difficulty calculated by using litecoin algorithm
+#define A_SCRYPT(a, b, c, d, e) \
+	{ a, b, 0, c, d, 1, 65536, 0x0000ffff00000000ULL, 0xFFFFFFFFULL, e}
+	A_SCRYPT( "scrypt",            "ckolivas",    10, ALGO_SCRYPT,      scrypt_regenhash),
+	A_SCRYPT( "nscrypt",           "ckolivas",    11, ALGO_NSCRYPT,     scrypt_regenhash),
+	A_SCRYPT( "adaptive-nscrypt",  "ckolivas",    11, ALGO_NSCRYPT,     scrypt_regenhash),
+	A_SCRYPT( "adaptive-n-scrypt", "ckolivas",    11, ALGO_NSCRYPT,     scrypt_regenhash),
+	A_SCRYPT( "scrypt-jane",       "scrypt-jane", 10, ALGO_SCRYPT_JANE, sj_scrypt_regenhash),
+#undef A_SCRYPT
 
-    // kernels starting from this will have difficulty calculated by using quarkcoin algorithm
-    { "quarkcoin",          "quarkcoin", 10, 0, ALGO_QUARKCOIN, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, quarkcoin_regenhash},
-    { "qubitcoin",          "qubitcoin", 10, 0, ALGO_QUBITCOIN, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, qubitcoin_regenhash},
-    { "inkcoin",            "inkcoin", 10, 0, ALGO_INKCOIN, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, inkcoin_regenhash},
-    { "animecoin",          "animecoin", 10, 0, ALGO_ANIMECOIN, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, animecoin_regenhash},
-    { "sifcoin",            "sifcoin", 10, 0, ALGO_SIFCOIN, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, sifcoin_regenhash},
+	// kernels starting from this will have difficulty calculated by using quarkcoin algorithm
+#define A_QUARK(a, b, c, d) \
+	{ a, b, 0, 10, c, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, d}
+	A_QUARK( "quarkcoin", "quarkcoin", ALGO_QUARKCOIN, quarkcoin_regenhash),
+	A_QUARK( "qubitcoin", "qubitcoin", ALGO_QUBITCOIN, qubitcoin_regenhash),
+	A_QUARK( "inkcoin",   "inkcoin",   ALGO_INKCOIN,   inkcoin_regenhash),
+	A_QUARK( "animecoin", "animecoin", ALGO_ANIMECOIN, animecoin_regenhash),
+	A_QUARK( "sifcoin",   "sifcoin",   ALGO_SIFCOIN,   sifcoin_regenhash),
+#undef A_QUARK
 
-    // kernels starting from this will have difficulty calculated by using bitcoin algorithm
-    { "darkcoin",           "darkcoin", 10, 0, ALGO_DARKCOIN, 1, 1, 0x00000000ffff0000ULL, 0xFFFFULL, darkcoin_regenhash},
-    { "myriadcoin-groestl", "myriadcoin-groestl", 10, 0, ALGO_MYRIADCOIN_GROESTL, 1, 1, 0x00000000ffff0000ULL, 0xFFFFULL, myriadcoin_groestl_regenhash},
-    { "fuguecoin",          "fuguecoin", 10, 0, ALGO_FUGUECOIN, 1, 1, 0x00000000ffff0000ULL, 0xFFFFULL, fuguecoin_regenhash},
-    { "groestlcoin",        "groestlcoin", 10, 0, ALGO_GROESTLCOIN, 1, 1, 0x00000000ffff0000ULL, 0xFFFFULL, groestlcoin_regenhash},
-    { NULL, NULL, 0, 0, ALGO_SCRYPT, 0, 0, 0, 0, NULL}
+	// kernels starting from this will have difficulty calculated by using bitcoin algorithm
+#define A_DARK(a, b, c, d) \
+	{ a, b, 0, 10, c, 1, 1, 0x00000000ffff0000ULL, 0xFFFFULL, d}
+	A_DARK( "darkcoin",           "darkcoin",           ALGO_DARKCOIN, darkcoin_regenhash),
+	A_DARK( "myriadcoin-groestl", "myriadcoin-groestl", ALGO_MYRIADCOIN_GROESTL, myriadcoin_groestl_regenhash),
+	A_DARK( "fuguecoin",          "fuguecoin",          ALGO_FUGUECOIN, fuguecoin_regenhash),
+	A_DARK( "groestlcoin",        "groestlcoin",        ALGO_GROESTLCOIN, groestlcoin_regenhash),
+#undef A_DARK
+
+	{ NULL, NULL, 0, 0, ALGO_SCRYPT, 0, 0, 0, 0, NULL}
 };
 
 void set_algorithm(algorithm_t** algo, const char* newname) {
-    algorithm_t* a;
-    for (a = algos; a->name; a++) {
-	if (strcmp(a->name, newname) == 0) {
-		*algo = a;
-		break;
+	algorithm_t* a;
+	for (a = algos; a->name; a++) {
+		if (strcmp(a->name, newname) == 0) {
+			*algo = a;
+			break;
+		}
 	}
-    }
-    (*algo)->n = (1 << (*algo)->nfactor);
+	(*algo)->n = (1 << (*algo)->nfactor);
 }
 
 void set_algorithm_nfactor(algorithm_t* algo, const uint8_t nfactor) {
-    algo->nfactor = nfactor;
-    algo->n = (1 << nfactor);
+	algo->nfactor = nfactor;
+	algo->n = (1 << nfactor);
 
-    return;
+	return;
 }
