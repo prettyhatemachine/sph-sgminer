@@ -6168,7 +6168,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	if (strcmp(gpus[i].kernelname, FUGUECOIN_KERNNAME) == 0)
+	if ((strcmp(gpus[i].kernelname, FUGUECOIN_KERNNAME) == 0) || (strcmp(gpus[i].kernelname, GROESTLCOIN_KERNNAME) == 0))
 		sha256(pool->coinbase, pool->swork.cb_len, merkle_root);
 	else
 		gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
