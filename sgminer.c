@@ -8375,8 +8375,6 @@ int main(int argc, char *argv[])
 
 	if (!getenv("GPU_MAX_ALLOC_PERCENT"))
 		applog(LOG_WARNING, "WARNING: GPU_MAX_ALLOC_PERCENT is not specified!");
-	if (!getenv("GPU_USE_SYNC_OBJECTS"))
-		applog(LOG_WARNING, "WARNING: GPU_USE_SYNC_OBJECTS is not specified!");
 
 	if (!total_pools) {
 		applog(LOG_WARNING, "Need to specify at least one pool server.");

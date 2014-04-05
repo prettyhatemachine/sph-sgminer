@@ -13,6 +13,17 @@
 * Multiple `--name` parsing should now work as expected (by _troky_).
 * `--coin` configuration parameter to specify a freeform pool
   description (by _troky_).
+* Added new kernels for cpu coins
+  quark --quarkcoin
+  qubit --qubitcoin
+  dark --darkcoin
+  myriad --myriadcoin-groestl
+  ink --inkcoin
+  anime --animecoin
+  fugue --fuguecoin
+  sif --sifcoin
+  groestl --groestlcoin
+
 
 
 ## Version 4.1.153 - 14th March 2014
