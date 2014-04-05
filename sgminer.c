@@ -6167,7 +6167,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	if ((strcmp(gpus[i].kernelname, FUGUECOIN_KERNNAME) == 0) || (strcmp(gpus[i].kernelname, GROESTLCOIN_KERNNAME) == 0))
+	if ((strcmp(gpus[i].kernelname, FUGUECOIN_KERNNAME) == 0) || (strcmp(gpus[i].kernelname, GROESTLCOIN_KERNNAME) == 0) || (strcmp(gpus[i].kernelname, TWECOIN_KERNNAME) == 0))
 		sha256(pool->coinbase, pool->swork.cb_len, merkle_root);
 	else
 		gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
@@ -6393,6 +6393,8 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 		darkcoin_regenhash(work);
 	else if (strcmp(gpus[0].kernelname, SIFCOIN_KERNNAME) == 0)
 		sifcoin_regenhash(work);
+	else if (strcmp(gpus[0].kernelname, TWECOIN_KERNNAME) == 0)
+		twecoin_regenhash(work);
 	else
 		scrypt_regenhash(work, work->pool->algorithm.n);
 }

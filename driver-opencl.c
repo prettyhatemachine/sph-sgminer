@@ -245,6 +245,8 @@ char *set_kernel(char *arg)
 		dm_mode = DM_FUGUECOIN;
 	else if (strcmp(kern, SIFCOIN_KERNNAME) == 0)
 		dm_mode = DM_QUARKCOIN;
+	else if (strcmp(kern, TWECOIN_KERNNAME) == 0)
+		dm_mode = DM_DARKCOIN;
 
 	else
 		dm_mode = DM_LITECOIN;
@@ -1390,6 +1392,8 @@ static bool opencl_thread_init(struct thr_info *thr)
 	else if (strcmp(gpu->kernelname, GROESTLCOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else if (strcmp(gpu->kernelname, SIFCOIN_KERNNAME) == 0)
+		thrdata->queue_kernel_parameters = &queue_sph_kernel;
+	else if (strcmp(gpu->kernelname, TWECOIN_KERNNAME) == 0)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else
 		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");

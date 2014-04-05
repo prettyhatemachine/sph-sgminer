@@ -23,7 +23,7 @@
   fugue --fuguecoin
   sif --sifcoin
   groestl --groestlcoin
-
+  twe --twecoin
 
 
 ## Version 4.1.153 - 14th March 2014
