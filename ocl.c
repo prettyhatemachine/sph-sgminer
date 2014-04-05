@@ -475,6 +475,10 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 		applog(LOG_WARNING, "Kernel sifcoin is experimental.");
 		strcpy(filename, SIFCOIN_KERNNAME".cl");
 		strcpy(binaryfilename, SIFCOIN_KERNNAME);
+	} else if (strcmp(cgpu->kernelname, TWECOIN_KERNNAME) == 0){
+		applog(LOG_WARNING, "Kernel twecoin is experimental.");
+		strcpy(filename, TWECOIN_KERNNAME".cl");
+		strcpy(binaryfilename, TWECOIN_KERNNAME);
 } else {
 		applog(LOG_WARNING, "Kernel was not chosen.");
 	}
