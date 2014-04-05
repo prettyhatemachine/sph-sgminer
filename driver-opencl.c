@@ -223,6 +223,10 @@ static enum cl_kernels select_kernel(char *arg)
 		return KL_ANIMECOIN;
 	if (!strcmp(arg, GROESTLCOIN_KERNNAME))
 		return KL_GROESTLCOIN;
+	if (!strcmp(arg, SIFCOIN_KERNNAME))
+		return KL_SIFCOIN;
+	if (!strcmp(arg, TWECOIN_KERNNAME))
+		return KL_TWECOIN;
 
 	return KL_NONE;
 }
@@ -1389,6 +1393,12 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 			case KL_GROESTLCOIN:
 				cgpu->kname = GROESTLCOIN_KERNNAME;
 				break;
+			case KL_SIFCOIN:
+				cgpu->kname = SIFCOIN_KERNNAME;
+				break;
+			case KL_TWECOIN:
+				cgpu->kname = TWECOIN_KERNNAME;
+				break;
 			default:
 				break;
 		}
@@ -1432,6 +1442,8 @@ static bool opencl_thread_init(struct thr_info *thr)
 	case KL_INKCOIN:
 	case KL_ANIMECOIN:
 	case KL_GROESTLCOIN:
+	case KL_SIFCOIN:
+	case KL_TWECOIN:
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 		break;
 	default:
