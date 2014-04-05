@@ -236,7 +236,7 @@ char *set_kernel(char *arg)
 	else if (strcmp(kern, ANIMECOIN_KERNNAME) == 0)
 		dm_mode = DM_QUARKCOIN;
 	else if (strcmp(kern, MYRIADCOIN_GROESTL_KERNNAME) == 0)
-		dm_mode = DM_FUGUECOIN;
+		dm_mode = DM_DARKCOIN;
 	else if (strcmp(kern, QUBITCOIN_KERNNAME) == 0)
 		dm_mode = DM_QUARKCOIN;
 	else if (strcmp(kern, INKCOIN_KERNNAME) == 0)
