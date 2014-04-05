@@ -184,6 +184,8 @@ int opt_tcp_keepalive = 30;
 int opt_tcp_keepalive;
 #endif
 
+double opt_diff_mult = 1.0;
+
 char *opt_kernel_path;
 char *sgminer_path;
 
@@ -1157,6 +1159,18 @@ static char *set_null(const char __maybe_unused *arg)
 	return NULL;
 }
 
+char *set_difficulty_multiplier(char *arg)
+{
+	char **endptr = NULL;
+	if (!(arg && arg[0]))
+		return "Invalid parameters for set difficulty multiplier";
+	opt_diff_mult = strtod(arg, endptr);
+	if (opt_diff_mult == 0 || endptr == arg)
+		return "Invalid value passed to set difficulty multiplier";
+
+	return NULL;
+}
+
 /* These options are available from config file or commandline */
 static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--algorithm",
@@ -1494,6 +1508,9 @@ OPT_WITH_ARG("--poolname", /* Backward compatibility, to be removed. */
 			"Display extra work time debug information"),
 	OPT_WITH_ARG("--pools",
 			opt_set_bool, NULL, NULL, opt_hidden),
+	OPT_WITH_ARG("--difficulty-multiplier",
+			set_difficulty_multiplier, NULL, NULL, 
+			"Difficulty multiplier for jobs received from stratum pools"),
 	OPT_ENDTABLE
 };
 

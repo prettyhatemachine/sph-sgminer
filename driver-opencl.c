@@ -246,7 +246,7 @@ char *set_kernel(char *arg)
 	else if (strcmp(kern, SIFCOIN_KERNNAME) == 0)
 		dm_mode = DM_QUARKCOIN;
 	else if (strcmp(kern, TWECOIN_KERNNAME) == 0)
-		dm_mode = DM_DARKCOIN;
+		dm_mode = DM_FUGUECOIN;
 
 	else
 		dm_mode = DM_LITECOIN;

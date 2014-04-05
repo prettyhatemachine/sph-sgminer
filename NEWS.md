@@ -24,6 +24,13 @@
   sif --sifcoin
   groestl --groestlcoin
   twe --twecoin
+* A new option was added: --difficulty-multiplier. 
+  It allows to set stratum difficulty multiplier. 
+  For QubitCoin, Quark and Animecoin it will be usually 256. 
+  For Groestlcoin, Fuguecoin and Twecoin it will be usually 0.0039062500 (1/256). 
+  Default value is 1.0. If you have "share above target" errors then set it to 256. 
+  If difficulty required by pool is strangely large, set it to 0.0039062500 (1/256). 
+  Other values are unlikely to be used. Hopefully this will fix all remaining stratum problems.
 
 
 ## Version 4.1.153 - 14th March 2014
