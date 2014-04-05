@@ -1049,7 +1049,6 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 
 static cl_int queue_sph_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
-	unsigned char *midstate = blk->work->midstate;
 	cl_kernel *kernel = &clState->kernel;
 	unsigned int num = 0;
 	cl_ulong le_target;

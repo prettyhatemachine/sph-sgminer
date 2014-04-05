@@ -3113,7 +3113,6 @@ static void calc_diff(struct work *work, double known)
 {
 	struct sgminer_pool_stats *pool_stats = &(work->pool->sgminer_pool_stats);
 	double difficulty;
-	uint64_t uintdiff;
 
 	if (known)
 		work->work_difficulty = known;
@@ -6231,7 +6230,6 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 static void get_work_prepare_thread(struct thr_info *mythr, struct work *work)
 {
 	int i;
-	bool cond;
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	mutex_lock(&algo_switch_lock);
