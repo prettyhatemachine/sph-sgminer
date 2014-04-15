@@ -4,10 +4,10 @@
 ## Introduction
 
 This is a multi-threaded multi-pool GPU miner with ATI GPU monitoring,
-(over)clocking and fanspeed support for scrypt-based cryptocurrency. It is
-based on cgminer by Con Kolivas (ckolivas), which is in turn based on
-cpuminer by Jeff Garzik (jgarzik).
- 
+(over)clocking and fanspeed support for scrypt-based coins. It is based on
+cgminer by Con Kolivas (ckolivas), which is in turn based on cpuminer by
+Jeff Garzik (jgarzik).
+
 **releases**: https://github.com/veox/sgminer/releases
 
 **git tree**: https://github.com/veox/sgminer
@@ -38,6 +38,7 @@ Documentation is available in directory `doc`. It is organised by topics:
 Note that **most of the documentation is outdated or incomplete**. If
 you want to contribute, fork this repository, update as needed, and
 submit a pull request.
+
 
 ## Building
 
@@ -88,7 +89,34 @@ directory directly, or `make install` if you wish to install
 ### Windows build instructions
 
 See `doc/windows-build.txt` for MinGW compilation and cross-compiation,
-`doc/cygwin-build.txt` for building using Cygwin.
+`doc/cygwin-build.txt` for building using Cygwin, or use the provided
+`winbuild` Microsoft Visual Studio project (tested on MSVS2010), with
+instructions in `winbuild/README.txt`.
+
+## GridSeed GC3355 support
+
+./configure --enable-gridseed
+
+GC3355-specific options can be specified via --gridseed-options or
+"gridseed-options" in the configuration file as a comma-separated list of
+sub-options:
+
+* baud - miner baud rate (default 115200)
+* freq - a choice of 250/400/450/500/550/600/650/700/750/800/850/900/950/1000
+* pll_r, pll_f, pll_od - fine-grained frequency tuning; see below
+* chips - number of chips per device (default 5)
+* per_chip_stats - print per-chip nonce generations and hardware failures
+
+If pll_r/pll_f/pll_od are specified, freq is ignored, and calculated as follows:
+* Fin = 25
+* Fref = int(Fin / (pll_r + 1))
+* Fvco = int(Fref * (pll_f + 1))
+* Fout = int(Fvco / (1 << pll_od))
+* freq = Fout
+
+This version of cgminer turns off all BTC cores so that power usage is low.
+On a 5-chip USB miner, power usage is around 10 W. GPUs are also supported.
+
 
 ## Basic Usage
 
@@ -454,30 +482,3 @@ For example (this is wrapped, but it's all on one line for real):
     000000004a4366808f81d44f26df3d69d7dc4b3473385930462d9ab707b50498
     f681634a4f1f63d01a0cd43fb338000000000080000000000000000000000000
     0000000000000000000000000000000000000000000000000000000080020000
-
-
-## Benchmark
-
-The --benchmark option hashes a single fixed work item over and over and does
-not submit shares to any pools.
-
-The --benchfile <arg> option hashes the work given in the file <arg> supplied.
-The format of the work file is:
-version,merkleroot,prevhash,diffbits,noncetime
-Any empty line or any line starting with '#' or '/' is ignored.
-When it reaches the end of the file it continues back at the top.
-
-The format of the data items matches the byte ordering and format of the
-the bitcoind getblock RPC output.
-
-An example file containing bitcoin block #1 would be:
-
-# Block 1
-1,0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098,00000000001
-9d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f,1d00ffff,1231469665
-
-However, the work data should be one line without the linebreak in the middle
-
-If you use --benchfile <arg>, then --benchfile-display will output a log line,
-for each nonce found, showing the nonce value in decimal and hex and the work
-used to find it in hex.

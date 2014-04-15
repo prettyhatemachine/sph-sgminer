@@ -34,6 +34,8 @@
 #include "adl.h"
 #include "util.h"
 
+#include "scrypt-jane.h"	/* sj_be32enc_vect */
+
 /* TODO: cleanup externals ********************/
 
 #ifdef HAVE_CURSES
@@ -48,7 +50,7 @@ extern bool opt_loginput;
 extern char *opt_kernel_path;
 extern int gpur_thr_id;
 extern bool opt_noadl;
-extern enum diff_calc_mode dm_mode;
+extern bool have_opencl;
 
 extern void *miner_thread(void *userdata);
 extern int dev_from_id(int thr_id);
@@ -197,7 +199,6 @@ char *set_thread_concurrency(char *arg)
 
 char *set_kernel(char *arg)
 {
-	char *kern;
 	char *nextptr;
 	int i, device = 0;
 
@@ -208,7 +209,7 @@ char *set_kernel(char *arg)
 	if (gpus[device].kernelname != NULL)
 		free(gpus[device].kernelname);
 	gpus[device].kernelname = strdup(nextptr);
-	device++;		
+	device++;
 
 	while ((nextptr = strtok(NULL, ",")) != NULL) {
 		if (gpus[device].kernelname != NULL)
@@ -216,40 +217,15 @@ char *set_kernel(char *arg)
 		gpus[device].kernelname = strdup(nextptr);
 		device++;
 	}
+
 	/* If only one kernel name provided, use same for all GPUs. */
 	if (device == 1) {
 		for (i = device; i < MAX_GPUDEVICES; i++) {
 			if (gpus[i].kernelname != NULL)
 				free(gpus[i].kernelname);
 			gpus[i].kernelname = strdup(gpus[0].kernelname);
-			}
-		}
-
-	kern = strdup(gpus[0].kernelname);
-
-	if (strcmp(kern, FUGUECOIN_KERNNAME) == 0)
-		dm_mode = DM_FUGUECOIN;
-	else if (strcmp(kern, DARKCOIN_KERNNAME) == 0)
-		dm_mode = DM_DARKCOIN;
-	else if (strcmp(kern, QUARKCOIN_KERNNAME) == 0)
-		dm_mode = DM_QUARKCOIN;
-	else if (strcmp(kern, ANIMECOIN_KERNNAME) == 0)
-		dm_mode = DM_QUARKCOIN;
-	else if (strcmp(kern, MYRIADCOIN_GROESTL_KERNNAME) == 0)
-		dm_mode = DM_DARKCOIN;
-	else if (strcmp(kern, QUBITCOIN_KERNNAME) == 0)
-		dm_mode = DM_QUARKCOIN;
-	else if (strcmp(kern, INKCOIN_KERNNAME) == 0)
-		dm_mode = DM_DARKCOIN;
-	else if (strcmp(kern, GROESTLCOIN_KERNNAME) == 0)
-		dm_mode = DM_FUGUECOIN;
-	else if (strcmp(kern, SIFCOIN_KERNNAME) == 0)
-		dm_mode = DM_QUARKCOIN;
-	else if (strcmp(kern, TWECOIN_KERNNAME) == 0)
-		dm_mode = DM_FUGUECOIN;
-
-	else
-		dm_mode = DM_LITECOIN;
+	    }
+	}
 
 	return NULL;
 }
@@ -769,7 +745,7 @@ retry: // TODO: refactor
 			mhash_base = false;
 		}
 
-		wlog("GPU%d: %.1f / %.1f %sh/s | A:%d  R:%d  HW:%d  U:%.2f/m  I:%d  xI:%d  rI:%d\n",
+		wlog("GPU %d: %.1f / %.1f %sh/s | A:%d  R:%d  HW:%d  U:%.2f/m  I:%d  xI:%d  rI:%d\n",
 			gpu, displayed_rolling, displayed_total, mhash_base ? "M" : "K",
 			cgpu->accepted, cgpu->rejected, cgpu->hw_errors,
 			cgpu->utility, cgpu->intensity, cgpu->xintensity, cgpu->rawintensity);
@@ -1035,8 +1011,21 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	cl_uint le_target;
 	cl_int status = 0;
 
+	uint32_t data[20];
+	cl_uint nfactor;
+
 	le_target = *(cl_uint *)(blk->work->device_target + 28);
-	memcpy(clState->cldata, blk->work->data, 80);
+
+	if (algorithm->algo == ALGO_SCRYPT_JANE) {
+		unsigned int timestamp = bswap_32(*((unsigned int *)(blk->work->data + 17*4)));
+		nfactor = sj_GetNfactor(timestamp);
+		nfactor = (1 << (nfactor + 1));
+		sj_be32enc_vect(data, (const uint32_t *)blk->work->data, 19);
+		clState->cldata = data;
+	} else {
+		clState->cldata = blk->work->data;
+	}
+
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
@@ -1045,19 +1034,24 @@ static cl_int queue_scrypt_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 	CL_SET_VARG(4, &midstate[0]);
 	CL_SET_VARG(4, &midstate[16]);
 	CL_SET_ARG(le_target);
+	if (algorithm->algo == ALGO_SCRYPT_JANE)
+		CL_SET_ARG(nfactor);
 
 	return status;
 }
 
 static cl_int queue_sph_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
+	unsigned char *midstate = blk->work->midstate;
 	cl_kernel *kernel = &clState->kernel;
 	unsigned int num = 0;
 	cl_ulong le_target;
 	cl_int status = 0;
+	uint32_t data[20];
 
 	le_target = *(cl_ulong *)(blk->work->device_target + 24);
-	flip80(clState->cldata, blk->work->data);
+	flip80(data, blk->work->data);
+	clState->cldata = data;
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
@@ -1140,8 +1134,6 @@ select_cgpu:
 		cgtime(&thr->sick);
 		if (!pthread_cancel(thr->pth)) {
 			applog(LOG_WARNING, "Thread %d still exists, killing it off", thr_id);
-			pthread_join(thr->pth, NULL);
-			thr->cgpu->drv->thread_shutdown(thr);
 		} else
 			applog(LOG_WARNING, "Thread %d no longer exists", thr_id);
 	}
@@ -1168,7 +1160,7 @@ select_cgpu:
 		//free(clState);
 
 		applog(LOG_INFO, "Reinit GPU thread %d", thr_id);
-		clStates[thr_id] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm);
+		clStates[thr_id] = initCl(virtual_gpu, name, sizeof(name));
 		if (!clStates[thr_id]) {
 			applog(LOG_ERR, "Failed to reinit GPU thread %d", thr_id);
 			goto select_cgpu;
@@ -1205,6 +1197,9 @@ static void opencl_detect(bool hotplug)
 {
 	int i;
 
+	if (opt_nogpu || hotplug)
+		return;
+
 	nDevs = clDevicesNum();
 	if (nDevs < 0) {
 		applog(LOG_ERR, "clDevicesNum returned error, no GPUs usable");
@@ -1234,7 +1229,6 @@ static void opencl_detect(bool hotplug)
 			cgpu->threads = 1;
 #endif
 		cgpu->virtual_gpu = i;
-		cgpu->algorithm = *default_algorithm;
 		add_cgpu(cgpu);
 	}
 
@@ -1262,12 +1256,12 @@ static void get_opencl_statline_before(char *buf, size_t bufsiz, struct cgpu_inf
 			tailsprintf(buf, bufsiz, "       ");
 		if (gf != -1)
 			// show invalid as 9999
-			tailsprintf(buf, bufsiz, "%4dRPM", gf > 9999 ? 9999 : gf);
+			tailsprintf(buf, bufsiz, "%4d ", gf > 9999 ? 9999 : gf);
 		else if ((gp = gpu_fanpercent(gpuid)) != -1)
-			tailsprintf(buf, bufsiz, "%3d%%    ", gp);
+			tailsprintf(buf, bufsiz, "%3d%% ", gp);
 		else
-			tailsprintf(buf, bufsiz, "        ");
-		tailsprintf(buf, bufsiz, "|");
+			tailsprintf(buf, bufsiz, "     ");
+		tailsprintf(buf, bufsiz, "| ");
 	} else
 		gpu->drv->get_statline_before = &blank_get_statline_before;
 }
@@ -1310,7 +1304,7 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 
 	strcpy(name, "");
 	applog(LOG_INFO, "Init GPU thread %i GPU %i virtual GPU %i", i, gpu, virtual_gpu);
-	clStates[i] = initCl(virtual_gpu, name, sizeof(name), &cgpu->algorithm);
+	clStates[i] = initCl(virtual_gpu, name, sizeof(name));
 	if (!clStates[i]) {
 #ifdef HAVE_CURSES
 		if (use_curses)
@@ -1339,12 +1333,12 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 	}
 	if (!cgpu->name)
 		cgpu->name = strdup(name);
-	if (!cgpu->kernelname)
-		cgpu->kernelname = strdup("ckolivas");
 
 	applog(LOG_INFO, "initCl() finished. Found %s", name);
 	cgtime(&now);
 	get_datestamp(cgpu->init, sizeof(cgpu->init), &now);
+
+	have_opencl = true;
 
 	return true;
 }
@@ -1365,38 +1359,10 @@ static bool opencl_thread_init(struct thr_info *thr)
 		return false;
 	}
 
-	if (strcmp(gpu->kernelname, ALEXKARNEW_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(gpu->kernelname, ALEXKAROLD_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(gpu->kernelname, CKOLIVAS_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(gpu->kernelname, ZUIKKIS_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(gpu->kernelname, PSW_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
-	else if (strcmp(gpu->kernelname, DARKCOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, QUBITCOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, QUARKCOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, MYRIADCOIN_GROESTL_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, FUGUECOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, INKCOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, ANIMECOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, GROESTLCOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, SIFCOIN_KERNNAME) == 0)
-		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-	else if (strcmp(gpu->kernelname, TWECOIN_KERNNAME) == 0)
+	if (ALGO_QUARKCOIN <= algorithm->algo && algorithm->algo <= ALGO_GROESTLCOIN)
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 	else
-		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");
+		thrdata->queue_kernel_parameters = &queue_scrypt_kernel;
 
 	thrdata->res = (uint32_t *)calloc(buffersize, 1);
 
@@ -1479,6 +1445,9 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		size_t global_work_offset[1];
 
 		global_work_offset[0] = work->blk.nonce;
+		if (algorithm->algo == ALGO_SCRYPT_JANE)
+			applog(LOG_DEBUG, "Nonce: %x, Global work size: %x, local work size: %x", work->blk.nonce, (unsigned)globalThreads[0], (unsigned)localThreads[0]);
+
 		status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, global_work_offset,
 						globalThreads, localThreads, 0,  NULL, NULL);
 	} else
@@ -1494,6 +1463,14 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	if (unlikely(status != CL_SUCCESS)) {
 		applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
 		return -1;
+	}
+
+	if (algorithm->algo == ALGO_SCRYPT_JANE) {
+		uint32_t *o;
+		uint32_t target;
+		o = thrdata->res;
+		target = *(uint32_t *)(work->target + 28);
+		applog(LOG_DEBUG, "Nonce: %x, Output buffer: %x %x %x %x %x %x %x %x Target: %x", work->blk.nonce, o[0], o[1], o[2], o[3], o[4], o[5], o[6], o[7], target);
 	}
 
 	/* The amount of work scanned can fluctuate when intensity changes
@@ -1523,58 +1500,48 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	return hashes;
 }
 
-// Cleanup OpenCL memory on the GPU
-// Note: This function is not thread-safe (clStates modification not atomic)
 static void opencl_thread_shutdown(struct thr_info *thr)
 {
 	const int thr_id = thr->id;
 	_clState *clState = clStates[thr_id];
-	clStates[thr_id] = NULL;
 
-	if (clState) {
-		clFinish(clState->commandQueue);
-		clReleaseMemObject(clState->outputBuffer);
-		clReleaseMemObject(clState->CLbuffer0);
-		clReleaseMemObject(clState->padbuffer8);
-		clReleaseKernel(clState->kernel);
-		clReleaseProgram(clState->program);
-		clReleaseCommandQueue(clState->commandQueue);
-		clReleaseContext(clState->context);
-		free(clState);
-	}
+	clReleaseKernel(clState->kernel);
+	clReleaseProgram(clState->program);
+	clReleaseCommandQueue(clState->commandQueue);
+	clReleaseContext(clState->context);
 }
 
 struct device_drv opencl_drv = {
-	/*.drv_id = */				DRIVER_opencl,
-	/*.dname = */				"opencl",
-	/*.name = */				"GPU",
-	/*.drv_detect = */			opencl_detect,
+	/*.drv_id = */			DRIVER_opencl,
+	/*.dname = */			"opencl",
+	/*.name = */			"GPU",
+	/*.drv_detect = */		opencl_detect,
 	/*.reinit_device = */		reinit_opencl_device,
 #ifdef HAVE_ADL
 	/*.get_statline_before = */	get_opencl_statline_before,
 #else
-								NULL,
+					NULL,
 #endif
 	/*.get_statline = */		get_opencl_statline,
-	/*.api_data = */			NULL,
-	/*.get_stats = */			NULL,
+	/*.api_data = */		NULL,
+	/*.get_stats = */		NULL,
 	/*.identify_device = */		NULL,
-	/*.set_device = */			NULL,
+	/*.set_device = */		NULL,
 
 	/*.thread_prepare = */		opencl_thread_prepare,
 	/*.can_limit_work = */		NULL,
-	/*.thread_init = */			opencl_thread_init,
+	/*.thread_init = */		opencl_thread_init,
 	/*.prepare_work = */		opencl_prepare_work,
-	/*.hash_work = */			NULL,
-	/*.scanhash = */			opencl_scanhash,
-	/*.scanwork = */			NULL,
-	/*.queue_full = */			NULL,
-	/*.flush_work = */			NULL,
-	/*.update_work = */			NULL,
-	/*.hw_error = */			NULL,
+	/*.hash_work = */		NULL,
+	/*.scanhash = */		opencl_scanhash,
+	/*.scanwork = */		NULL,
+	/*.queue_full = */		NULL,
+	/*.flush_work = */		NULL,
+	/*.update_work = */		NULL,
+	/*.hw_error = */		NULL,
 	/*.thread_shutdown = */		opencl_thread_shutdown,
 	/*.thread_enable =*/		NULL,
-								false,
-								0,
-								0
+					false,
+					0,
+					0
 };

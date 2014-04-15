@@ -28,7 +28,7 @@
  * This file was originally written by Colin Percival as part of the Tarsnap
  * online backup system.
  */
- 
+
 /* N (nfactor), CPU/Memory cost parameter */
 __constant uint N[] = {
 	0x00000001U,  /* never used, padding */

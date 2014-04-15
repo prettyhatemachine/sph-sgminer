@@ -57,7 +57,7 @@ __constant uint N[] = {
 #ifndef NFACTOR
 #define NFACTOR 10
 #endif
- 
+
 __constant uint ES[2] = { 0x00FF00FF, 0xFF00FF00 };
 __constant uint K[] = {
 	0x428a2f98U,
@@ -866,7 +866,7 @@ const uint4 midstate0, const uint4 midstate16, const uint target)
 	SHA256(&tstate0, &tstate1, input[0],input[1],input[2],input[3]);
 
 #pragma unroll
-	for (uint i=0; i<4; i++) 
+	for (uint i=0; i<4; i++)
 	{
 		pad0 = tstate0;
 		pad1 = tstate1;

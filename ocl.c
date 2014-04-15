@@ -31,7 +31,6 @@
 #include <unistd.h>
 
 #include "findnonce.h"
-#include "algorithm.h"
 #include "ocl.h"
 
 /* FIXME: only here for global config vars, replace with configuration.h
@@ -219,7 +218,7 @@ void patch_opcodes(char *w, unsigned remaining)
 	applog(LOG_DEBUG, "Patched a total of %i BFI_INT instructions", patched);
 }
 
-_clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *algorithm)
+_clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 {
 	_clState *clState = (_clState *)calloc(1, sizeof(_clState));
 	bool patchbfi = false, prog_built = false;
@@ -412,75 +411,17 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 	char strbuf[32];
 
 	if (cgpu->kernelname == NULL) {
-		applog(LOG_INFO, "No kernel specified, defaulting to ckolivas");
-		cgpu->kernelname = strdup("ckolivas");
+		applog(LOG_INFO, "No kernel specified, defaulting to %s", algorithm->kernelname);
+		cgpu->kernelname = algorithm->kernelname;
 	}
 
+	sprintf(strbuf, "%s.cl", cgpu->kernelname);
+	strcpy(filename, strbuf);
+	strcpy(binaryfilename, cgpu->kernelname);
 
-
-	if (strcmp(cgpu->kernelname, ALEXKARNEW_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel alexkarnew is experimental.");
-		strcpy(filename, ALEXKARNEW_KERNNAME".cl");
-		strcpy(binaryfilename, ALEXKARNEW_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, ALEXKAROLD_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel alexkarold is experimental.");
-		strcpy(filename, ALEXKAROLD_KERNNAME".cl");
-		strcpy(binaryfilename, ALEXKAROLD_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, CKOLIVAS_KERNNAME) == 0){
-		strcpy(filename, CKOLIVAS_KERNNAME".cl");
-		strcpy(binaryfilename, CKOLIVAS_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, PSW_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel psw is experimental.");
-		strcpy(filename, PSW_KERNNAME".cl");
-		strcpy(binaryfilename, PSW_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, ZUIKKIS_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel zuikkis is experimental.");
-		strcpy(filename, ZUIKKIS_KERNNAME".cl");
-		strcpy(binaryfilename, ZUIKKIS_KERNNAME);
-		/* Kernel only supports worksize 256 */
-		cgpu->work_size = 256;
-	} else if (strcmp(cgpu->kernelname, DARKCOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel darkcoin is experimental.");
-		strcpy(filename, DARKCOIN_KERNNAME".cl");
-		strcpy(binaryfilename, DARKCOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, QUBITCOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel qubitcoin is experimental.");
-		strcpy(filename, QUBITCOIN_KERNNAME".cl");
-		strcpy(binaryfilename, QUBITCOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, QUARKCOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel quarkcoin is experimental.");
-		strcpy(filename, QUARKCOIN_KERNNAME".cl");
-		strcpy(binaryfilename, QUARKCOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, MYRIADCOIN_GROESTL_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel myriadcoin-groestl is experimental.");
-		strcpy(filename, MYRIADCOIN_GROESTL_KERNNAME".cl");
-		strcpy(binaryfilename, MYRIADCOIN_GROESTL_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, FUGUECOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel fuguecoin is experimental.");
-		strcpy(filename, FUGUECOIN_KERNNAME".cl");
-		strcpy(binaryfilename, FUGUECOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, INKCOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel inkcoin is experimental.");
-		strcpy(filename, INKCOIN_KERNNAME".cl");
-		strcpy(binaryfilename, INKCOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, ANIMECOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel animecoin is experimental.");
-		strcpy(filename, ANIMECOIN_KERNNAME".cl");
-		strcpy(binaryfilename, ANIMECOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, GROESTLCOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel groestlcoin is experimental.");
-		strcpy(filename, GROESTLCOIN_KERNNAME".cl");
-		strcpy(binaryfilename, GROESTLCOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, SIFCOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel sifcoin is experimental.");
-		strcpy(filename, SIFCOIN_KERNNAME".cl");
-		strcpy(binaryfilename, SIFCOIN_KERNNAME);
-	} else if (strcmp(cgpu->kernelname, TWECOIN_KERNNAME) == 0){
-		applog(LOG_WARNING, "Kernel twecoin is experimental.");
-		strcpy(filename, TWECOIN_KERNNAME".cl");
-		strcpy(binaryfilename, TWECOIN_KERNNAME);
-} else {
-		applog(LOG_WARNING, "Kernel was not chosen.");
+	if ((strcmp(cgpu->kernelname, "zuikkis") == 0) && (cgpu->lookup_gap != 2)) {
+		applog(LOG_WARNING, "Kernel zuikkis only supports lookup-gap = 2, forcing.");
+		cgpu->lookup_gap = 2;
 	}
 
 	/* For some reason 2 vectors is still better even if the card says
@@ -514,11 +455,6 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 		cgpu->lookup_gap = 2;
 	} else
 		cgpu->lookup_gap = cgpu->opt_lg;
-
-	if ((strcmp(cgpu->kernelname, "zuikkis") == 0) && (cgpu->lookup_gap != 2)) {
-		applog(LOG_WARNING, "Kernel zuikkis only supports lookup-gap = 2 (currently %d), forcing.", cgpu->lookup_gap);
-		cgpu->lookup_gap = 2;
-	}
 
 	if (!cgpu->opt_tc) {
 		unsigned int sixtyfours;
@@ -621,7 +557,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
 build:
 	applog(LOG_NOTICE, "Building binary %s", binaryfilename);
-	
+
 	clState->program = clCreateProgramWithSource(clState->context, 1, (const char **)&source, sourceSize, &status);
 	if (status != CL_SUCCESS) {
 		applog(LOG_ERR, "Error %d: Loading Binary into cl_program (clCreateProgramWithSource)", status);
@@ -720,7 +656,7 @@ build:
 		applog(LOG_ERR, "OpenCL compiler generated a zero sized binary, FAIL!");
 		return NULL;
 	}
-	binaries[slot] = (char *)calloc(sizeof(char) * binary_sizes[slot], 1);
+	binaries[slot] = (char *)calloc(sizeof(char)* binary_sizes[slot], 1);
 	status = clGetProgramInfo(clState->program, CL_PROGRAM_BINARIES, sizeof(char *) * cpnd, binaries, NULL );
 	if (unlikely(status != CL_SUCCESS)) {
 		applog(LOG_ERR, "Error %d: Getting program info. CL_PROGRAM_BINARIES (clGetProgramInfo)", status);
@@ -797,9 +733,8 @@ built:
 	free(binaries);
 	free(binary_sizes);
 
-	applog(LOG_INFO, "Initialising kernel %s with%s bitalign, %d vectors, worksize %d, nfactor %d and n %d",
-	       filename, clState->hasBitAlign ? "" : "out", clState->vwidth, (int)(clState->wsize),
-	       algorithm->nfactor, algorithm->n);
+	applog(LOG_NOTICE, "Initialising kernel %s with%s bitalign, %spatched BFI",
+	       filename, clState->hasBitAlign ? "" : "out", patchbfi ? "" : "un");
 
 	if (!prog_built) {
 		/* create a cl program executable for all the devices specified */
@@ -824,7 +759,7 @@ built:
 	}
 
 	size_t ipt = (algorithm->n / cgpu->lookup_gap +
-	        (algorithm->n % cgpu->lookup_gap > 0));
+		      (algorithm->n % cgpu->lookup_gap > 0));
 	size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
 	/* Use the max alloc value which has been rounded to a power of

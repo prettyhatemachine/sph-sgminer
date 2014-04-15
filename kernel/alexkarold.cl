@@ -791,7 +791,7 @@ void scrypt_core(uint4 X[8], __global uint4*restrict lookup)
 	uint CO_tmp=xSIZE<<3U;
 	uint CO_tmp2=x<<3U;
 
-	for(uint y=0; y<1024/LOOKUP_GAP; ++y)
+	for(uint y=0; y<N[NFACTOR]/LOOKUP_GAP; ++y)
 	{
 		uint CO=y*CO_tmp+CO_tmp2;
 #pragma unroll
@@ -863,7 +863,7 @@ const uint4 midstate0, const uint4 midstate16, const uint target)
 	SHA256(&tstate0, &tstate1, input[0],input[1],input[2],input[3]);
 
 #pragma unroll
-	for (uint i=0; i<4; i++) 
+	for (uint i=0; i<4; i++)
 	{
 		pad0 = tstate0;
 		pad1 = tstate1;

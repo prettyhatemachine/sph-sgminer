@@ -24,13 +24,12 @@
  * SUCH DAMAGE.
  */
 
-#include "sifcoin.h"
+#include "config.h"
+#include "miner.h"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
-
 
 #include "sph/sph_blake.h"
 #include "sph/sph_bmw.h"
@@ -53,7 +52,7 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 }
 
 
-void sifhash(void *state, const void *input)
+inline void sifhash(void *state, const void *input)
 {
     sph_blake512_context     ctx_blake;
     sph_bmw512_context       ctx_bmw;
@@ -89,12 +88,12 @@ void sifhash(void *state, const void *input)
     sph_keccak512 (&ctx_keccak, (const void*) hash, 64);
     sph_keccak512_close(&ctx_keccak, (void*) hash);
 
-     sph_skein512_init(&ctx_skein);
+    sph_skein512_init(&ctx_skein);
     // SKEIN;
     sph_skein512 (&ctx_skein, (const void*) hash, 64);
     sph_skein512_close(&ctx_skein, (void*) hash);
 
-   memcpy(state, hash, 32);
+    memcpy(state, hash, 32);
 }
 
 static const uint32_t diff1targ = 0x0000ffff;
@@ -127,7 +126,7 @@ int sifcoin_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t no
 void sifcoin_regenhash(struct work *work)
 {
         uint32_t data[20];
-        //char *scratchbuf;
+        char *scratchbuf;
         uint32_t *nonce = (uint32_t *)(work->data + 76);
         uint32_t *ohash = (uint32_t *)(work->hash);
 
@@ -142,7 +141,7 @@ bool scanhash_sifcoin(struct thr_info *thr, const unsigned char __maybe_unused *
 		     uint32_t max_nonce, uint32_t *last_nonce, uint32_t n)
 {
 	uint32_t *nonce = (uint32_t *)(pdata + 76);
-	//char *scratchbuf;
+	char *scratchbuf;
 	uint32_t data[20];
 	uint32_t tmp_hash7;
 	uint32_t Htarg = le32toh(((const uint32_t *)ptarget)[7]);

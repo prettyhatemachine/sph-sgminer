@@ -121,6 +121,7 @@ static	ADL_OVERDRIVE6_POWERCONTROL_SET		ADL_Overdrive6_PowerControl_Set;
 #endif
 static int iNumberAdapters;
 static LPAdapterInfo lpInfo = NULL;
+static LPADLDisplayInfo lpAdlDisplayInfo = NULL;
 
 int set_fanspeed(int gpu, int iFanSpeed);
 static float __gpu_temp(struct gpu_adl *ga);
@@ -325,6 +326,7 @@ void init_adl(int nDevs)
 	struct gpu_adapters adapters[MAX_GPUDEVICES], vadapters[MAX_GPUDEVICES];
 	bool devs_match = true;
 	ADLBiosInfo BiosInfo;
+	int iNumDisplays;
 
 	applog(LOG_INFO, "Number of ADL devices: %d", nDevs);
 
@@ -359,7 +361,7 @@ void init_adl(int nDevs)
 		return;
 	}
 
-	applog(LOG_INFO, "Found %d logical ADL adapters", iNumberAdapters);
+	applog(LOG_INFO, "Found %d ADL adapters", iNumberAdapters);
 
 	/* Iterate over iNumberAdapters and find the lpAdapterID of real devices */
 	for (i = 0; i < iNumberAdapters; i++) {
@@ -998,7 +1000,7 @@ int set_engineclock(int gpu, int iEngineClock)
 	ga->lastengine = iEngineClock;
 
 	lev = ga->lpOdParameters.iNumberOfPerformanceLevels - 1;
-	lpOdPerformanceLevels = (ADLODPerformanceLevels *)alloca(sizeof(ADLODPerformanceLevels) + (lev * sizeof(ADLODPerformanceLevel)));
+	lpOdPerformanceLevels = (ADLODPerformanceLevels *)alloca(sizeof(ADLODPerformanceLevels)+(lev * sizeof(ADLODPerformanceLevel)));
 	lpOdPerformanceLevels->iSize = sizeof(ADLODPerformanceLevels) + sizeof(ADLODPerformanceLevel) * lev;
 
 	lock_adl();
@@ -1061,7 +1063,7 @@ int set_memoryclock(int gpu, int iMemoryClock)
 	ga = &gpus[gpu].adl;
 
 	lev = ga->lpOdParameters.iNumberOfPerformanceLevels - 1;
-	lpOdPerformanceLevels = (ADLODPerformanceLevels *)alloca(sizeof(ADLODPerformanceLevels) + (lev * sizeof(ADLODPerformanceLevel)));
+	lpOdPerformanceLevels = (ADLODPerformanceLevels *)alloca(sizeof(ADLODPerformanceLevels)+(lev * sizeof(ADLODPerformanceLevel)));
 	lpOdPerformanceLevels->iSize = sizeof(ADLODPerformanceLevels) + sizeof(ADLODPerformanceLevel) * lev;
 
 	lock_adl();
@@ -1126,7 +1128,7 @@ int set_vddc(int gpu, float fVddc)
 	ga = &gpus[gpu].adl;
 
 	lev = ga->lpOdParameters.iNumberOfPerformanceLevels - 1;
-	lpOdPerformanceLevels = (ADLODPerformanceLevels *)alloca(sizeof(ADLODPerformanceLevels) + (lev * sizeof(ADLODPerformanceLevel)));
+	lpOdPerformanceLevels = (ADLODPerformanceLevels *)alloca(sizeof(ADLODPerformanceLevels)+(lev * sizeof(ADLODPerformanceLevel)));
 	lpOdPerformanceLevels->iSize = sizeof(ADLODPerformanceLevels) + sizeof(ADLODPerformanceLevel) * lev;
 
 	lock_adl();

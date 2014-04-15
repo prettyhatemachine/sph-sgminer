@@ -65,12 +65,14 @@ networks would make it invalidate the work from each other.
 
 A workaround is running separate instances (see next question).
 
+
 ## Can I mine with different login credentials or pools for each separate
 device?
 
 No. Run per-device instances with command-line argument `-d`, or specify
 `device` in the configuration file. Use per-instance configuration files
 if needed (specified with `--config` on the command line).
+
 
 ## Can I put multiple pools in the config file?
 

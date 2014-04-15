@@ -205,7 +205,7 @@ bool opt_parse(int *argc, char *argv[], void (*errlog)(const char *fmt, ...))
 #if defined(WIN32) && !defined(_MSC_VER)
 	char *original_argv0 = argv[0];
 	argv[0] = (char*)basename(argv[0]);
-	#endif
+#endif
 
 	/* This helps opt_usage. */
 	opt_argv0 = argv[0];
@@ -214,7 +214,7 @@ bool opt_parse(int *argc, char *argv[], void (*errlog)(const char *fmt, ...))
 	
 #if defined(WIN32) && !defined(_MSC_VER)
 	argv[0] = original_argv0;
-	#endif
+#endif
 
 	/* parse_one returns 0 on finish, -1 on error */
 	return (ret == 0);

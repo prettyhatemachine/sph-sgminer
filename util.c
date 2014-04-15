@@ -1307,7 +1307,7 @@ bool stratum_send(struct pool *pool, char *s, ssize_t len)
 		case SEND_OK:
 			break;
 		case SEND_SELECTFAIL:
-			applog(LOG_DEBUG, "Write select failed on %s sock",  get_pool_name(pool));
+			applog(LOG_DEBUG, "Write select failed on %s sock", pool->name);
 			suspend_stratum(pool);
 			break;
 		case SEND_SENDFAIL:
@@ -1606,7 +1606,7 @@ static bool parse_notify(struct pool *pool, json_t *val)
 	hex2bin(cb2, coinbase2, cb2_len);
 	free(pool->coinbase);
 	align_len(&alloc_len);
-	pool->coinbase = calloc(alloc_len, 1);
+	pool->coinbase = (unsigned char *)calloc(alloc_len, 1);
 	if (unlikely(!pool->coinbase))
 		quit(1, "Failed to calloc pool coinbase in parse_notify");
 	memcpy(pool->coinbase, cb1, cb1_len);
@@ -1643,7 +1643,11 @@ static bool parse_diff(struct pool *pool, json_t *val)
 {
 	double old_diff, diff;
 
-	diff = json_number_value(json_array_get(val, 0)) * opt_diff_mult;
+	if (opt_diff_mult == 0)
+		diff = json_number_value(json_array_get(val, 0)) * algorithm->diff_multiplier1;
+	else
+		diff = json_number_value(json_array_get(val, 0)) * opt_diff_mult;
+		
 	if (diff == 0)
 		return false;
 
@@ -1656,11 +1660,11 @@ static bool parse_diff(struct pool *pool, json_t *val)
 		int idiff = diff;
 
 		if ((double)idiff == diff)
-			applog(pool == current_pool() ? LOG_NOTICE : LOG_DEBUG, "%s difficulty changed to %d", get_pool_name(pool) ,idiff);
+			applog(LOG_NOTICE, "%s difficulty changed to %d", get_pool_name(pool), idiff);
 		else
-			applog(pool == current_pool() ? LOG_NOTICE : LOG_DEBUG, "%s difficulty changed to %.3f", get_pool_name(pool), diff);
+			applog(LOG_NOTICE, "%s difficulty changed to %.3f", get_pool_name(pool), diff);
 	} else
-		applog(LOG_DEBUG, "%s difficulty set to %f", get_pool_name(pool), diff);
+		applog(LOG_DEBUG, "%s difficulty set to %f", pool->name, diff);
 
 	return true;
 }
@@ -1872,7 +1876,7 @@ bool auth_stratum(struct pool *pool)
 	}
 
 	ret = true;
-	applog(LOG_INFO, "Stratum authorisation success for %s",  get_pool_name(pool));
+	applog(LOG_INFO, "Stratum authorisation success for %s", pool->name);
 	pool->probed = true;
 	successful_connect = true;
 
@@ -2132,7 +2136,7 @@ static bool setup_stratum_socket(struct pool *pool)
 	pool->stratum_active = false;
 	if (pool->sock) {
 		/* FIXME: change to LOG_DEBUG if issue #88 resolved */
-		applog(LOG_INFO, "Closing %s socket",  get_pool_name(pool));
+		applog(LOG_INFO, "Closing %s socket", pool->name);
 		CLOSESOCKET(pool->sock);
 	}
 	pool->sock = 0;
@@ -2301,7 +2305,7 @@ out:
 
 void suspend_stratum(struct pool *pool)
 {
-	applog(LOG_INFO, "Closing socket for stratum %s",  get_pool_name(pool));
+	applog(LOG_INFO, "Closing socket for stratum %s", pool->name);
 
 	mutex_lock(&pool->stratum_lock);
 	__suspend_stratum(pool);
@@ -2319,7 +2323,7 @@ bool initiate_stratum(struct pool *pool)
 resend:
 	if (!setup_stratum_socket(pool)) {
 		/* FIXME: change to LOG_DEBUG when issue #88 resolved */
-		applog(LOG_INFO, "setup_stratum_socket() on %s failed",  get_pool_name(pool));
+		applog(LOG_INFO, "setup_stratum_socket() on %s failed", pool->name);
 		sockd = false;
 		goto out;
 	}
@@ -2438,9 +2442,9 @@ out:
 			json_decref(val);
 			goto resend;
 		}
-		applog(LOG_DEBUG, "Initiating stratum failed on %s",  get_pool_name(pool));
+		applog(LOG_DEBUG, "Initiating stratum failed on %s", pool->name);
 		if (sockd) {
-		  applog(LOG_DEBUG, "Suspending stratum on %s",  get_pool_name(pool));
+		  applog(LOG_DEBUG, "Suspending stratum on %s", pool->name);
 			suspend_stratum(pool);
 		}
 	}
@@ -2451,7 +2455,7 @@ out:
 
 bool restart_stratum(struct pool *pool)
 {
-	applog(LOG_DEBUG, "Restarting stratum on pool %s",  get_pool_name(pool));
+	applog(LOG_DEBUG, "Restarting stratum on pool %s", pool->name);
 
 	if (pool->stratum_active)
 		suspend_stratum(pool);
@@ -2540,7 +2544,7 @@ void *str_text(char *ptr)
 
 	uptr = (unsigned char *)ptr;
 
-	ret = txt = (char *)malloc(strlen(ptr)*4+5); // Guaranteed >= needed
+	ret = txt = (char *)malloc(strlen(ptr) * 4 + 5); // Guaranteed >= needed
 	if (unlikely(!txt))
 		quithere(1, "Failed to malloc txt");
 

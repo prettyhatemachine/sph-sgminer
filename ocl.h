@@ -21,7 +21,7 @@ typedef struct {
 	cl_mem CLbuffer0;
 	cl_mem padbuffer8;
 	size_t padbufsize;
-	unsigned char cldata[80];
+	void * cldata;
 	bool hasBitAlign;
 	bool hasOpenCL11plus;
 	bool hasOpenCL12plus;
@@ -34,5 +34,5 @@ typedef struct {
 
 extern char *file_contents(const char *filename, int *length);
 extern int clDevicesNum(void);
-extern _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *algorithm);
+extern _clState *initCl(unsigned int gpu, char *name, size_t nameSize);
 #endif /* __OCL_H__ */
