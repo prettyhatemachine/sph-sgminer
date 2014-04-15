@@ -1,5 +1,6 @@
 # sgminer
 
+# Please check README.md and /doc/configuration.md for updates
 
 ## Introduction
 
