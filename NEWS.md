@@ -12,6 +12,26 @@
 * Multiple `--name` parsing should now work as expected (by _troky_).
 * `--coin` configuration parameter to specify a freeform pool
   description (by _troky_).
+* Added new Algorithms for cpu coins
+  nscrypt --algorithm nscrypt
+  scrypt-jane --algorithm scrypt-jane
+  quark --algorithm quarkcoin
+  qubit --algorithm qubitcoin
+  dark --algorithm darkcoin
+  myriad --algorithm myriadcoin-groestl
+  ink --algorithm inkcoin
+  anime --algorithm animecoin
+  fugue --algorithm fuguecoin
+  sif --algorithm sifcoin
+  groestl --algorithm groestlcoin
+  twe --algorithm twecoin
+  maru --algorithm marucoin
+* A new option was added: --difficulty-multiplier. 
+  It allows to set stratum difficulty multiplier. 
+  The multipliers are 0.0039062500 (1/256), 1.0, and 256
+  If you have "share above target" errors then set it to 1.0 or 256. 
+  If difficulty required by pool is strangely large, set it to 1.0 or 0.0039062500 (1/256). 
+  Other values are unlikely to be used. Hopefully this will fix all remaining stratum problems.
 
 
 ## Version 4.1.153 - 14th March 2014

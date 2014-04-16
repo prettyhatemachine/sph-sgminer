@@ -190,6 +190,8 @@ static pthread_t usb_poll_thread;
 static bool usb_polling;
 #endif
 
+double opt_diff_mult = 0;
+
 char *opt_kernel_path;
 char *sgminer_path;
 
@@ -1169,6 +1171,18 @@ static char *set_null(const char __maybe_unused *arg)
 	return NULL;
 }
 
+char *set_difficulty_multiplier(char *arg)
+{
+	char **endptr = NULL;
+	if (!(arg && arg[0]))
+		return "Invalid parameters for set difficulty multiplier";
+	opt_diff_mult = strtod(arg, endptr);
+	if (opt_diff_mult == 0 || endptr == arg)
+		return "Invalid value passed to set difficulty multiplier";
+
+	return NULL;
+}
+
 /* These options are available from config file or commandline */
 static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--algorithm",
@@ -1541,6 +1555,9 @@ static struct opt_table opt_config_table[] = {
 			"Display extra work time debug information"),
 	OPT_WITH_ARG("--pools",
 			opt_set_bool, NULL, NULL, opt_hidden),
+	OPT_WITH_ARG("--difficulty-multiplier",
+			set_difficulty_multiplier, NULL, NULL, 
+			"Difficulty multiplier for jobs received from stratum pools"),
 	OPT_ENDTABLE
 };
 
@@ -2323,7 +2340,7 @@ static void get_statline(char *buf, size_t bufsiz, struct cgpu_info *cgpu)
 
 	snprintf(buf, bufsiz, "%s%d ", cgpu->drv->name, cgpu->device_id);
 	cgpu->drv->get_statline_before(buf, bufsiz, cgpu);
-	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.0f R:%.0f HW:%d WU:%.3f/m",
+	tailsprintf(buf, bufsiz, "(%ds):%s (avg):%sh/s | A:%.2f R:%.2f HW:%d WU:%.3f/m",
 		opt_log_interval,
 		displayed_rolling,
 		displayed_hashes,
@@ -2443,7 +2460,7 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	wu = cgpu->diff1 / dev_runtime * 60;
 
 	wmove(statuswin, devcursor + count, 0);
-	cg_wprintw(statuswin, "%s %*d: ", cgpu->drv->name, dev_width, cgpu->device_id);
+	cg_wprintw(statuswin, "%s %*d:", cgpu->drv->name, dev_width, cgpu->device_id);
 	logline[0] = '\0';
 	cgpu->drv->get_statline_before(logline, sizeof(logline), cgpu);
 	cg_wprintw(statuswin, "%s", logline);
@@ -2478,7 +2495,7 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(wu, &wuwidth);
 
-	cg_wprintw(statuswin, "/%6s | A:%*.0f R:%*.0f (%*.1f%%) HW:%*d WU:%*.3f/m",
+	cg_wprintw(statuswin, "/%6s | A:%*.2f R:%*.2f (%*.1f%%) HW:%*d WU:%*.3f/m",
 			displayed_hashes,
 			dawidth, cgpu->diff_accepted,
 			drwidth, cgpu->diff_rejected,
@@ -5288,7 +5305,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, sizeof(displayed_rolling), 4);
 
 	snprintf(statusline, sizeof(statusline),
-		"%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  WU:%.3f/m",
+		"%s(%ds):%s (avg):%sh/s | A:%.2f  R:%.2f  HW:%d  WU:%.3f/m",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
 		total_diff_accepted, total_diff_rejected, hw_errors,
@@ -6145,8 +6162,11 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
-	memcpy(merkle_sha, merkle_root, 32);
+	if ((algorithm->algo == ALGO_FUGUECOIN) || (algorithm->algo == ALGO_GROESTLCOIN) || (algorithm->algo == ALGO_TWECOIN))
+		sha256(pool->coinbase, pool->swork.cb_len, merkle_root);
+	else
+		gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
+		memcpy(merkle_sha, merkle_root, 32);
 	for (i = 0; i < pool->swork.merkles; i++) {
 		memcpy(merkle_sha + 32, pool->swork.merkle_bin[i], 32);
 		gen_hash(merkle_sha, merkle_root, 64);

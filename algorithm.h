@@ -16,7 +16,9 @@ enum algorithm {
     ALGO_SIFCOIN,
     ALGO_DARKCOIN, // kernels starting from this will have difficulty calculated by using bitcoin algorithm
     ALGO_MYRIADCOIN_GROESTL,
-    ALGO_FUGUECOIN,
+	ALGO_TWECOIN,
+	ALGO_MARUCOIN,
+    ALGO_FUGUECOIN, // kernels starting from this will have difficulty calculated by using fuguecoin algorithm
     ALGO_GROESTLCOIN,
 };
 

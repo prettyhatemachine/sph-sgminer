@@ -16,10 +16,22 @@ cryptocurrencies.
 
 *Supported:*
 
-* `adaptive-n-factor` - Vertcoin-style adaptive N-factor scrypt.
-  N-factor defaults to 11. Aliases: `adaptive-nfactor` (to be removed
+* `adaptive-n-scrypt` - Vertcoin-style adaptive N-factor scrypt.
+  N-factor defaults to 11. Aliases: `adaptive-nscrypt` (to be removed
   in future versions) and `nscrypt`.
 * `scrypt` - Litecoin-style static N-factor scrypt.
+* `scrypt-jane`
+* `darkcoin`
+* `qubitcoin`
+* `myriadcoin-groestl`
+* `quarkcoin`
+* `fuguecoin`
+* `inkcoin`
+* `animecoin`
+* `groestlcoin`
+* `sifcoin`
+* `twecoin`
+
 * everything else - currently defaults to `scrypt`, subject to change
   without warning.
 

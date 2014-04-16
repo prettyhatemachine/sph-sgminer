@@ -46,6 +46,7 @@
 #include "pool.h"
 
 #define DEFAULT_SOCKWAIT 60
+extern double opt_diff_mult;
 
 bool successful_connect = false;
 static void keep_sockalive(SOCKETTYPE fd)
@@ -1642,7 +1643,11 @@ static bool parse_diff(struct pool *pool, json_t *val)
 {
 	double old_diff, diff;
 
-	diff = json_number_value(json_array_get(val, 0)) * algorithm->diff_multiplier1;
+	if (opt_diff_mult == 0)
+		diff = json_number_value(json_array_get(val, 0)) * algorithm->diff_multiplier1;
+	else
+		diff = json_number_value(json_array_get(val, 0)) * opt_diff_mult;
+		
 	if (diff == 0)
 		return false;
 

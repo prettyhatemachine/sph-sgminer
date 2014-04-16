@@ -19,6 +19,8 @@
 #include "myriadcoin-groestl.h"
 #include "fuguecoin.h"
 #include "groestlcoin.h"
+#include "twecoin.h"
+#include "marucoin.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -39,7 +41,10 @@ static algorithm_t algos[] = {
 	{ a, b, 0, 10, c, 256, 256, 0x000000ffff000000ULL, 0xFFFFFFULL, d}
 	A_QUARK( "quarkcoin", "quarkcoin", ALGO_QUARKCOIN, quarkcoin_regenhash),
 	A_QUARK( "qubitcoin", "qubitcoin", ALGO_QUBITCOIN, qubitcoin_regenhash),
+<<<<<<< HEAD
 	A_QUARK( "inkcoin",   "inkcoin",   ALGO_INKCOIN,   inkcoin_regenhash),
+=======
+>>>>>>> origin/master
 	A_QUARK( "animecoin", "animecoin", ALGO_ANIMECOIN, animecoin_regenhash),
 	A_QUARK( "sifcoin",   "sifcoin",   ALGO_SIFCOIN,   sifcoin_regenhash),
 #undef A_QUARK
@@ -47,12 +52,28 @@ static algorithm_t algos[] = {
 	// kernels starting from this will have difficulty calculated by using bitcoin algorithm
 #define A_DARK(a, b, c, d) \
 	{ a, b, 0, 10, c, 1, 1, 0x00000000ffff0000ULL, 0xFFFFULL, d}
+<<<<<<< HEAD
 	A_DARK( "darkcoin",           "darkcoin",           ALGO_DARKCOIN, darkcoin_regenhash),
 	A_DARK( "myriadcoin-groestl", "myriadcoin-groestl", ALGO_MYRIADCOIN_GROESTL, myriadcoin_groestl_regenhash),
 	A_DARK( "fuguecoin",          "fuguecoin",          ALGO_FUGUECOIN, fuguecoin_regenhash),
 	A_DARK( "groestlcoin",        "groestlcoin",        ALGO_GROESTLCOIN, groestlcoin_regenhash),
 #undef A_DARK
 
+=======
+	A_DARK( "darkcoin",				"darkcoin",           	ALGO_DARKCOIN, 				darkcoin_regenhash),
+	A_DARK( "inkcoin",				"inkcoin",   			ALGO_INKCOIN,   			inkcoin_regenhash),
+	A_DARK( "myriadcoin-groestl", 	"myriadcoin-groestl", 	ALGO_MYRIADCOIN_GROESTL, 	myriadcoin_groestl_regenhash),
+	A_DARK( "twecoin",          	"twecoin",          	ALGO_TWECOIN, 				twecoin_regenhash),
+	A_DARK( "marucoin",          	"marucoin",          	ALGO_MARUCOIN, 				marucoin_regenhash),
+#undef A_DARK
+
+	// kernels starting from this will have difficulty calculated by using fuguecoin algorithm
+#define A_FUGUE(a, b, c, d) \
+	{ a, b, 0, 10, c, 1, 256, 0x00000000ffff0000ULL, 0xFFFFULL, d}
+	A_FUGUE( "fuguecoin",          "fuguecoin",          ALGO_FUGUECOIN, 	fuguecoin_regenhash),
+	A_FUGUE( "groestlcoin",        "groestlcoin",        ALGO_GROESTLCOIN, 	groestlcoin_regenhash),
+#undef A_FUGUE
+>>>>>>> origin/master
 	{ NULL, NULL, 0, 0, ALGO_SCRYPT, 0, 0, 0, 0, NULL}
 };
 
