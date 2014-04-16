@@ -29,8 +29,8 @@
  * @author   phm <phm@inbox.com>
  */
 
-#ifndef DARKCOIN_CL
-#define DARKCOIN_CL
+#ifndef INKCOIN_CL
+#define INKCOIN_CL
 
 #if __ENDIAN_LITTLE__
 #define SPH_LITTLE_ENDIAN 1
@@ -239,4 +239,4 @@ __kernel void search(__global unsigned char* block, volatile __global uint* outp
         output[output[0xFF]++] = SWAP4(gid);
 }
 
-#endif // DARKCOIN_CL
+#endif // INKCOIN_CL
