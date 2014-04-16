@@ -2,6 +2,8 @@
 
 # Please check NEWS.md and /doc/configuration.md for updates
 
+CPU coin algo's no longer use kernel option to set. Use algorithm instead. i.e. --algorithm darkcoin
+
 ## Introduction
 
 This is a multi-threaded multi-pool GPU miner with ATI GPU monitoring,
