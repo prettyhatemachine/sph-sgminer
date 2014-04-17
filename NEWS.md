@@ -32,7 +32,8 @@
   If you have "share above target" errors then set it to 1.0 or 256. 
   If difficulty required by pool is strangely large, set it to 1.0 or 0.0039062500 (1/256). 
   Other values are unlikely to be used. Hopefully this will fix all remaining stratum problems.
-
+* Gridseed Support --enable-gridseed at ./configure during build 
+  (Haven't tested this personally as I dont have one)
 
 ## Version 4.1.153 - 14th March 2014
 
