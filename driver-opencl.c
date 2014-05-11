@@ -229,6 +229,8 @@ static enum cl_kernels select_kernel(char *arg)
 		return KL_TWECOIN;
 	if (!strcmp(arg, MARUCOIN_KERNNAME))
 		return KL_MARUCOIN;
+	if (!strcmp(arg, DIAMOND_KERNNAME))
+		return KL_DIAMOND;
 
 	return KL_NONE;
 }
@@ -1402,6 +1404,9 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 			case KL_MARUCOIN:
 				cgpu->kname = MARUCOIN_KERNNAME;
 				break;
+			case KL_DIAMOND:
+				cgpu->kname = DIAMOND_KERNNAME;
+				break;
 			default:
 				break;
 		}
@@ -1448,6 +1453,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 	case KL_SIFCOIN:
 	case KL_TWECOIN:
 	case KL_MARUCOIN:
+	case KL_DIAMOND:
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
 		break;
 	default:

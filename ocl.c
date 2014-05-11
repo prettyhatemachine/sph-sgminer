@@ -509,6 +509,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			strcpy(filename, MARUCOIN_KERNNAME".cl");
 			strcpy(binaryfilename, MARUCOIN_KERNNAME);
 			break;
+		case KL_DIAMOND:
+			applog(LOG_WARNING, "Kernel diamond is experimental.");
+			strcpy(filename, DIAMOND_KERNNAME".cl");
+			strcpy(binaryfilename, DIAMOND_KERNNAME);
+			break;
 		case KL_NONE: /* Shouldn't happen */
 			break;
 	}

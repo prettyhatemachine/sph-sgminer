@@ -392,6 +392,7 @@ enum cl_kernels {
 	KL_GROESTLCOIN,
 	KL_TWECOIN,
 	KL_MARUCOIN,
+	KL_DIAMOND,
 };
 
 enum dev_reason {
